@@ -9,7 +9,7 @@ import {
   getOperationDefinition,
   variablesInOperation,
 } from "apollo-utilities";
-import { ApolloLink } from "apollo-link-http";
+import { ApolloLink } from "apollo-link";
 import { RESET_STATE } from "@redux-offline/redux-offline/lib/constants";
 import OfflineLink, { offlineEffect, discard } from "./links/offline";
 import { REHYDRATE_STORE } from "./actions/rehydrateStore";
