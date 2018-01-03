@@ -1,6 +1,7 @@
 // @flow
 import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
 import {
+  ApolloCache,
   readQueryFromStore,
   defaultNormalizedCacheFactory,
 } from "apollo-cache-inmemory";
@@ -10,10 +11,9 @@ import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
 
-import { NORMALIZED_CACHE_KEY } from "../cache";
-
 export type Input = {
   store: Store,
+  cache: ApolloCache,
   detectNetwork: () => boolean,
 };
 
@@ -23,7 +23,7 @@ export default class OfflineLink extends ApolloLink {
   store: Store;
 
   constructor(options: Options) {
-    const { store } = options;
+    const { store, cache } = options;
 
     super((operation: Operation, forward: NextLink) => {
       return new Observable(observer => {
@@ -41,7 +41,7 @@ export default class OfflineLink extends ApolloLink {
         const isQuery = operationType === "query";
 
         if (!online && isQuery) {
-          const data = processOfflineQuery(operation, store);
+          const data = processOfflineQuery(operation, store, cache);
           return finish(data);
         }
 
@@ -67,14 +67,12 @@ export default class OfflineLink extends ApolloLink {
   }
 }
 
-const processOfflineQuery = (operation, store) => {
-  const { [NORMALIZED_CACHE_KEY]: normalizedCache = {} } = store.getState();
+const processOfflineQuery = (operation, store, cache) => {
   const { query, variables } = operation;
-  const cacheStore = defaultNormalizedCacheFactory(normalizedCache);
 
   try {
     const queryData = readQueryFromStore({
-      store: cacheStore,
+      store: cache.data,
       query,
       variables,
     });
