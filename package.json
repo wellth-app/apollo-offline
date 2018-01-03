@@ -12,7 +12,10 @@
   "scripts": {
     "flow": "flow"
   },
-  "files": ["src/", "index.js"],
+  "files": [
+    "src/",
+    "index.js"
+  ],
   "dependencies": {
     "@redux-offline/redux-offline": "^2.2.1",
     "apollo-cache-inmemory": "^1.1.4",

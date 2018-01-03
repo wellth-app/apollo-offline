@@ -1,2 +1,4 @@
 // @flow
-export default (state): boolean => state.offline.online;
+import type { State } from "../reducers";
+
+export default (state: State): boolean => state.offline.online;

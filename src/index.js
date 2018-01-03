@@ -38,6 +38,7 @@ export default class ApolloOfflineClient extends ApolloClient {
       middleware = [],
       offlineLinks = [],
       onlineLinks = [],
+      cache,
       ...clientOptions
     } = options;
 
@@ -57,6 +58,7 @@ export default class ApolloOfflineClient extends ApolloClient {
         ...offlineLinks,
         new OfflineLink({
           store,
+          cache,
           detectNetwork: () => networkConnected(store.getState()),
         }),
         ...onlineLinks,

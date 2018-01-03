@@ -1,4 +1,5 @@
 // @flow
+import { ApolloClient } from "apollo-client";
 import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
 import {
   ApolloCache,
@@ -125,7 +126,11 @@ const processMutation = (operation, store) => {
   return data;
 };
 
-export const offlineEffect = (client, effect, action: Action) => {
+export const offlineEffect = (
+  client: ApolloClient,
+  effect: any,
+  action: Action
+) => {
   const { type } = action;
   const {
     mutation,
@@ -152,7 +157,7 @@ export const offlineEffect = (client, effect, action: Action) => {
   return client.mutate(options);
 };
 
-export const discard = (error, action: Action, retries: number) => {
+export const discard = (error: any, action: Action, retries: number) => {
   const { graphQLErrors = [] } = error;
   if (graphQLErrors.length) {
     return true;
