@@ -17,6 +17,7 @@ import { createOfflineStore } from "./store";
 import networkConnected from "./selectors/networkConnected";
 
 export type Input = {
+  ...ApolloClientOptions,
   /// Middleware for the redux-offline store.
   middleware?: Middleware[],
   /// Links executed before the offline cache.
@@ -32,7 +33,7 @@ export type Options = Input & ApolloClientOptions;
 export default class ApolloOfflineClient extends ApolloClient {
   reduxStore: Store;
 
-  constructor(options: Options & ApolloClientOptions) {
+  constructor(options: Options) {
     const {
       persistCallback = () => {},
       middleware = [],
@@ -52,8 +53,9 @@ export default class ApolloOfflineClient extends ApolloClient {
       discard,
     });
 
-    const newOptions = {
+    super({
       ...clientOptions,
+      cache,
       link: ApolloLink.from([
         ...offlineLinks,
         new OfflineLink({
@@ -63,9 +65,7 @@ export default class ApolloOfflineClient extends ApolloClient {
         }),
         ...onlineLinks,
       ]),
-    };
-
-    super(newOptions);
+    });
 
     this.reduxStore = store;
   }
