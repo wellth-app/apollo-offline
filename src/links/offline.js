@@ -12,10 +12,19 @@ import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
 
 import { NORMALIZED_CACHE_KEY } from "../cache";
 
+export type Input = {
+  store: Store,
+  detectNetwork: () => boolean,
+};
+
+export type Options = Input & ApolloLink.Options;
+
 export default class OfflineLink extends ApolloLink {
   store: Store;
 
-  constructor(store: Store, options: ApolloLink.Options) {
+  constructor(options: Options) {
+    const { store } = options;
+
     super((operation: Operation, forward: NextLink) => {
       return new Observable(observer => {
         const finish = data => {
@@ -24,7 +33,7 @@ export default class OfflineLink extends ApolloLink {
           return () => null;
         };
 
-        const { offline: { online } } = store.getState();
+        const online = options.detectNetwork();
         const { operation: operationType } = getOperationDefinition(
           operation.query
         );

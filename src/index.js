@@ -1,4 +1,5 @@
-/// @flow
+// @flow
+import { Action, Store, Middleware } from "redux";
 import ApolloClient, {
   MutationOptions,
   ApolloClientOptions,
@@ -8,24 +9,14 @@ import {
   getOperationDefinition,
   variablesInOperation,
 } from "apollo-utilities";
-import { ApolloLink, HttpLink } from "apollo-link-http";
-import {
-  InMemoryCache,
-  IntrospectionFragmentMatcher,
-} from "apollo-cache-inmemory";
-import type {
-  IntrospectionResultData,
-  CacheResolverMap,
-} from "apollo-cache-inmemory";
-import { persistCache } from "apollo-cache-persist";
+import { ApolloLink } from "apollo-link-http";
 import { RESET_STATE } from "@redux-offline/redux-offline/lib/constants";
-import moment from "moment-timezone";
 import OfflineLink, { offlineEffect, discard } from "./links/offline";
+import { REHYDRATE_STORE } from "./actions/rehydrateStore";
 import { createOfflineStore } from "./store";
+import networkConnected from "./selectors/networkConnected";
 
-export type Options = {
-  /// The uri of the grpahql API.
-  uri: string,
+export type Input = {
   /// Middleware for the redux-offline store.
   middleware?: Middleware[],
   /// Links executed before the offline cache.
@@ -36,17 +27,18 @@ export type Options = {
   persistCallback?: () => void,
 };
 
+export type Options = Input & ApolloClientOptions;
+
 export default class ApolloOfflineClient extends ApolloClient {
   reduxStore: Store;
 
   constructor(options: Options & ApolloClientOptions) {
     const {
-      uri,
-      cache,
       persistCallback = () => {},
       middleware = [],
       offlineLinks = [],
       onlineLinks = [],
+      ...clientOptions
     } = options;
 
     const store = createOfflineStore({
@@ -59,16 +51,16 @@ export default class ApolloOfflineClient extends ApolloClient {
       discard,
     });
 
-    const link = ApolloLink.from([
-      ...offlineLinks,
-      new OfflineLink(store),
-      ...onlineLinks,
-    ]);
-
     const newOptions = {
       ...clientOptions,
-      link,
-      cache,
+      link: ApolloLink.from([
+        ...offlineLinks,
+        new OfflineLink({
+          store,
+          detectNetwork: () => networkConnected(store.getState()),
+        }),
+        ...onlineLinks,
+      ]),
     };
 
     super(newOptions);

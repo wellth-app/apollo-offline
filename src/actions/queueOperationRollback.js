@@ -1,4 +1,4 @@
-/// @flow
+// @flow
 export const QUEUE_OPERATION_ROLLBACK = "QUEUE_OPERATION_ROLLBACK";
 
 export default {
