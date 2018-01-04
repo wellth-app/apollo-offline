@@ -53,6 +53,9 @@ export default class ApolloOfflineClient extends ApolloClient {
       discard,
     });
 
+    const link = ApolloLink.from([]);
+    console.log(link);
+
     super({
       ...clientOptions,
       cache,
