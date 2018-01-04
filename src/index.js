@@ -39,9 +39,9 @@ export default class ApolloOfflineClient extends ApolloClient {
       middleware = [],
       offlineLinks = [],
       onlineLinks = [],
-      cache,
       ...clientOptions
     } = options;
+    const { cache } = clientOptions;
 
     const store = createOfflineStore({
       middleware,
@@ -53,12 +53,8 @@ export default class ApolloOfflineClient extends ApolloClient {
       discard,
     });
 
-    const link = ApolloLink.from([]);
-    console.log(link);
-
     super({
       ...clientOptions,
-      cache,
       link: ApolloLink.from([
         ...offlineLinks,
         new OfflineLink({
