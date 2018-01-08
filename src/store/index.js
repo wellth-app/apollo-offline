@@ -42,7 +42,7 @@ export const createOfflineStore = (options: Options): Store => {
         ...offlineConfig,
         persistCallback,
         persistOptions: {
-          blacklist: ["rehydrated", "eclipse"],
+          blacklist: ["rehydrated"],
         },
         effect,
         discard,
