@@ -1,6 +1,6 @@
 {
   "name": "@wellth/apollo-offline",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A redux-offline implementation of Apollo 2.0.",
   "main": "index.js",
   "author": "Justin Makaila",
@@ -19,8 +19,6 @@
     "apollo-client": "^2.0.4",
     "apollo-link": "^1.0.7",
     "apollo-utilities": "^1.0.3",
-    "graphql": "^0.12.3",
-    "graphql-tag": "^2.6.1",
     "redux": "^3.7.2",
     "redux-thunk": "^2.2.0"
   },
@@ -29,6 +27,8 @@
     "babel-preset-env": "^1.6.1",
     "babel-preset-flow": "^6.23.0",
     "flow": "^0.2.3",
-    "flow-bin": "^0.62.0"
+    "flow-bin": "^0.62.0",
+    "graphql": "^0.12.3",
+    "graphql-tag": "^2.6.1"
   }
 }
