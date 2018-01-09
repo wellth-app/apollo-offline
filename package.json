@@ -1,6 +1,6 @@
 {
   "name": "@wellth/apollo-offline",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A redux-offline implementation of Apollo 2.0.",
   "main": "index.js",
   "author": "Justin Makaila",
@@ -15,10 +15,10 @@
   "files": ["src/", "index.js"],
   "dependencies": {
     "@redux-offline/redux-offline": "^2.2.1",
-    "apollo-cache-inmemory": "^1.1.4",
-    "apollo-client": "^2.0.4",
+    "apollo-cache-inmemory": "^1.1.5",
+    "apollo-client": "^2.2.4",
     "apollo-link": "^1.0.7",
-    "apollo-utilities": "^1.0.3",
+    "apollo-utilities": "^1.0.4",
     "redux": "^3.7.2",
     "redux-thunk": "^2.2.0"
   },
