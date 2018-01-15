@@ -11,13 +11,13 @@ import {
 } from "apollo-utilities";
 import { ApolloLink } from "apollo-link";
 import { RESET_STATE } from "@redux-offline/redux-offline/lib/constants";
+import type { NetworkCallback } from "@redux-offline/redux-offline";
 import OfflineLink, { offlineEffect, discard } from "./links/offline";
 import { REHYDRATE_STORE } from "./actions/rehydrateStore";
 import { createOfflineStore } from "./store";
 import networkConnected from "./selectors/networkConnected";
 
 export type Input = {
-  ...ApolloClientOptions,
   /// Middleware for the redux-offline store.
   middleware?: Middleware[],
   /// Links executed before the offline cache.
@@ -26,6 +26,7 @@ export type Input = {
   onlineLinks?: ApolloLink[],
   /// Callback to be invoked when the redux-offline store is rehydrated.
   persistCallback?: () => void,
+  detectNetwork?: (callback: NetworkCallback) => void,
 };
 
 export type Options = Input & ApolloClientOptions;
@@ -36,6 +37,7 @@ export default class ApolloOfflineClient extends ApolloClient {
   constructor(options: Options) {
     const {
       persistCallback = () => {},
+      detectNetwork,
       middleware = [],
       offlineLinks = [],
       onlineLinks = [],
@@ -51,6 +53,7 @@ export default class ApolloOfflineClient extends ApolloClient {
       },
       effect: (effect, action: Action) => offlineEffect(this, effect, action),
       discard,
+      detectNetwork,
     });
 
     super({

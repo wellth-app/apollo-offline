@@ -9,7 +9,10 @@ import {
   Middleware,
 } from "redux";
 import { offline } from "@redux-offline/redux-offline";
-import type { OfflineAction } from "@redux-offline/redux-offline";
+import type {
+  OfflineAction,
+  NetworkCallback,
+} from "@redux-offline/redux-offline";
 import offlineConfig from "@redux-offline/redux-offline/lib/defaults";
 import thunk from "redux-thunk";
 import reducers from "../reducers";
@@ -26,10 +29,17 @@ export type Options = {
   persistCallback: () => void,
   effect: NetworkEffect,
   discard: Discard,
+  detectNetwork?: (callback: NetworkCallback) => void,
 };
 
 export const createOfflineStore = (options: Options): Store => {
-  const { middleware, persistCallback, effect, discard } = options;
+  const {
+    middleware,
+    persistCallback,
+    effect,
+    discard,
+    detectNetwork,
+  } = options;
   const _middleware = [thunk, ...middleware];
 
   return createStore(
@@ -46,6 +56,7 @@ export const createOfflineStore = (options: Options): Store => {
         },
         effect,
         discard,
+        detectNetwork,
       })
     )
   );
