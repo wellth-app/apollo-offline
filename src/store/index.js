@@ -38,7 +38,7 @@ export const createOfflineStore = (options: Options): Store => {
     persistCallback,
     effect,
     discard,
-    detectNetwork,
+    detectNetwork = offlineConfig.detectNetwork,
   } = options;
   const _middleware = [thunk, ...middleware];
 
