@@ -27,6 +27,14 @@ export default class OfflineLink extends ApolloLink {
     const { store, cache } = options;
 
     super((operation: Operation, forward: NextLink) => {
+      const { requireOnline = false } = operation.getContext();
+
+      /// If the operation requires to be online, forward the operation instead
+      /// of processing it through the apollo cache or offline reducer.
+      if (requireOnline) {
+        return forward(operation);
+      }
+
       return new Observable(observer => {
         const finish = data => {
           observer.next({ data });
