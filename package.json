@@ -18,10 +18,10 @@
   ],
   "dependencies": {
     "@redux-offline/redux-offline": "^2.2.1",
-    "apollo-cache-inmemory": "^1.1.5",
-    "apollo-client": "^2.2.0",
-    "apollo-link": "^1.0.7",
-    "apollo-utilities": "^1.0.4",
+    "apollo-cache-inmemory": "^1.1.9",
+    "apollo-client": "^2.2.5",
+    "apollo-link": "^1.1.0",
+    "apollo-utilities": "^1.0.8",
     "redux": "^3.7.2",
     "redux-thunk": "^2.2.0"
   },
