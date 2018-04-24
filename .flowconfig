@@ -46,6 +46,9 @@ node_modules/react-native/flow/
 node_modules/expo/flow/
 
 [options]
+module.system.node.resolve_dirname=node_modules
+module.system.node.resolve_dirname=./src
+
 emoji=true
 
 module.system=haste
@@ -71,4 +74,4 @@ suppress_comment=\\(.\\|\n\\)*\\$FlowFixedInNextDeploy
 suppress_comment=\\(.\\|\n\\)*\\$FlowExpectedError
 
 [version]
-^0.62.0
+^0.69.0

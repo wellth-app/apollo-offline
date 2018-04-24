@@ -4,9 +4,9 @@ import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
 import { ApolloCache, readQueryFromStore } from "apollo-cache-inmemory";
 import { getOperationDefinition } from "apollo-utilities";
 import { Action, Store } from "redux";
-import { QUEUE_OPERATION } from "../actions/queueOperation";
-import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
-import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
+import { QUEUE_OPERATION } from "actions/queueOperation";
+import { QUEUE_OPERATION_COMMIT } from "actions/queueOperationCommit";
+import { QUEUE_OPERATION_ROLLBACK } from "actions/queueOperationRollback";
 
 export type Input = {
   store: Store,

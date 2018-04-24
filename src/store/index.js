@@ -14,7 +14,7 @@ import type {
 } from "@redux-offline/redux-offline";
 import offlineConfig from "@redux-offline/redux-offline/lib/defaults";
 import thunk from "redux-thunk";
-import reducers from "../reducers";
+import reducers from "reducers";
 
 export type NetworkEffect = (effect: any, action: OfflineAction) => Promise<*>;
 export type Discard = (
