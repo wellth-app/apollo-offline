@@ -1,12 +1,8 @@
 // @flow
 import { ApolloClient } from "apollo-client";
 import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
-import {
-  ApolloCache,
-  readQueryFromStore,
-  defaultNormalizedCacheFactory,
-} from "apollo-cache-inmemory";
-import { getOperationDefinition, getOperationName } from "apollo-utilities";
+import { ApolloCache, readQueryFromStore } from "apollo-cache-inmemory";
+import { getOperationDefinition } from "apollo-utilities";
 import { Action, Store } from "redux";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
@@ -35,8 +31,8 @@ export default class OfflineLink extends ApolloLink {
         return forward(operation);
       }
 
-      return new Observable(observer => {
-        const finish = data => {
+      return new Observable((observer) => {
+        const finish = (data) => {
           observer.next({ data });
           observer.complete();
           return () => null;
@@ -44,7 +40,7 @@ export default class OfflineLink extends ApolloLink {
 
         const online = options.detectNetwork();
         const { operation: operationType } = getOperationDefinition(
-          operation.query
+          operation.query,
         );
         const isMutation = operationType === "mutation";
         const isQuery = operationType === "query";
@@ -134,12 +130,7 @@ const processMutation = (operation, store) => {
   return data;
 };
 
-export const offlineEffect = (
-  client: ApolloClient,
-  effect: any,
-  action: Action
-) => {
-  const { type } = action;
+export const offlineEffect = (client: ApolloClient, effect: any) => {
   const {
     mutation,
     variables,
@@ -165,15 +156,18 @@ export const offlineEffect = (
   return client.mutate(options);
 };
 
+const ERROR_STATUS_CODE = 400;
+const MAX_RETRY_COUNT = 10;
+
 export const discard = (error: any, action: Action, retries: number) => {
   const { graphQLErrors = [] } = error;
   if (graphQLErrors.length) {
     return true;
   } else {
-    if (error.networkError.statusCode >= 400) {
+    if (error.networkError.statusCode >= ERROR_STATUS_CODE) {
       return true;
     }
   }
 
-  return error.permanent || retries > 10;
+  return error.permanent || retries > MAX_RETRY_COUNT;
 };

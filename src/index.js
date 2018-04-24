@@ -4,11 +4,7 @@ import ApolloClient, {
   MutationOptions,
   ApolloClientOptions,
 } from "apollo-client";
-import {
-  toIdValue,
-  getOperationDefinition,
-  variablesInOperation,
-} from "apollo-utilities";
+import { getOperationDefinition, variablesInOperation } from "apollo-utilities";
 import { ApolloLink } from "apollo-link";
 import { RESET_STATE } from "@redux-offline/redux-offline/lib/constants";
 import type { NetworkCallback } from "@redux-offline/redux-offline";

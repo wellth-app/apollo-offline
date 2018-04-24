@@ -4,7 +4,6 @@ import {
   applyMiddleware,
   compose,
   Store,
-  Action,
   combineReducers,
   Middleware,
 } from "redux";
@@ -21,7 +20,7 @@ export type NetworkEffect = (effect: any, action: OfflineAction) => Promise<*>;
 export type Discard = (
   error: any,
   action: OfflineAction,
-  retries: number
+  retries: number,
 ) => boolean;
 
 export type Options = {
@@ -57,7 +56,7 @@ export const createOfflineStore = (options: Options): Store => {
         effect,
         discard,
         detectNetwork,
-      })
-    )
+      }),
+    ),
   );
 };
