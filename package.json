@@ -2,7 +2,7 @@
   "name": "@wellth/apollo-offline",
   "version": "1.0.12-1",
   "description": "A redux-offline implementation of Apollo 2.0.",
-  "main": "index.js",
+  "main": "lib/index.js",
   "author": "Justin Makaila",
   "license": "ISC",
   "repository": {
@@ -16,8 +16,7 @@
     "prettier": "prettier --write \"{src,__{tests,mocks,mockData}__}/**/*.js\""
   },
   "files": [
-    "lib/",
-    "index.js"
+    "lib/"
   ],
   "dependencies": {
     "@redux-offline/redux-offline": "^2.2.1",
