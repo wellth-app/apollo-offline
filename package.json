@@ -20,7 +20,7 @@
   ],
   "dependencies": {
     "@redux-offline/redux-offline": "^2.2.1",
-    "apollo-boost": "^0.1.7-7",
+    "apollo-boost": "^0.1.7-8",
     "redux": "^3.7.2",
     "redux-thunk": "^2.2.0"
   },
