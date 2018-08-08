@@ -16,6 +16,11 @@ export type Input = {
 
 export type Options = Input & ApolloLink.Options;
 
+const OPERATION_TYPE_MUTATION = "mutation";
+const OPERATION_TYPE_QUERY = "query";
+const ERROR_STATUS_CODE = 400;
+// const MAX_RETRY_COUNT = 10;
+
 export default class OfflineLink extends ApolloLink {
   store: Store;
 
@@ -42,8 +47,8 @@ export default class OfflineLink extends ApolloLink {
         const { operation: operationType } = getOperationDefinition(
           operation.query,
         );
-        const isMutation = operationType === "mutation";
-        const isQuery = operationType === "query";
+        const isMutation = operationType === OPERATION_TYPE_MUTATION;
+        const isQuery = operationType === OPERATION_TYPE_QUERY;
 
         if (!online && isQuery) {
           const data = processOfflineQuery(operation, store, cache);
@@ -156,10 +161,7 @@ export const offlineEffect = (client: ApolloClient, effect: any) => {
   return client.mutate(options);
 };
 
-const ERROR_STATUS_CODE = 400;
-const MAX_RETRY_COUNT = 10;
-
-export const discard = (error: any, action: Action, retries: number) => {
+export const discard = (error: any, action: Action) => {
   const { graphQLErrors = [] } = error;
   if (graphQLErrors.length) {
     return true;
@@ -169,5 +171,5 @@ export const discard = (error: any, action: Action, retries: number) => {
     }
   }
 
-  return error.permanent || retries > MAX_RETRY_COUNT;
+  return error.permanent;
 };
