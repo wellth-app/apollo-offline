@@ -1,6 +1,6 @@
 {
   "name": "@wellth/apollo-offline",
-  "version": "1.0.12-10",
+  "version": "1.0.13",
   "description": "A redux-offline implementation of Apollo 2.0.",
   "main": "lib/index.js",
   "author": "Justin Makaila",
@@ -20,7 +20,7 @@
   ],
   "dependencies": {
     "@redux-offline/redux-offline": "^2.2.1",
-    "apollo-boost": "^0.1.7-14",
+    "apollo-boost": "^0.1.16",
     "redux": "^3.7.2",
     "redux-thunk": "^2.2.0"
   },
@@ -45,5 +45,8 @@
     "graphql": "^0.12.3",
     "graphql-tag": "^2.6.1",
     "prettier-eslint": "^8.8.1"
+  },
+  "resolutions": {
+    "apollo-utilities": "1.0.21-0"
   }
 }

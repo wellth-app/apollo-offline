@@ -1,7 +1,7 @@
 // @flow
 import { ApolloClient } from "apollo-client";
 import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
-import { ApolloCache, readQueryFromStore } from "apollo-cache-inmemory";
+import { ApolloCache } from "apollo-cache";
 import { getOperationDefinition } from "apollo-utilities";
 import { Action, Store } from "redux";
 import { QUEUE_OPERATION } from "actions/queueOperation";
@@ -77,12 +77,15 @@ export default class OfflineLink extends ApolloLink {
   }
 }
 
-const processOfflineQuery = (operation, store, cache) => {
+const processOfflineQuery = (
+  operation: Operation,
+  store: Store,
+  cache: ApolloCache,
+) => {
   const { query, variables } = operation;
 
   try {
-    const queryData = readQueryFromStore({
-      store: cache.data,
+    const queryData = cache.readQuery({
       query,
       variables,
     });
