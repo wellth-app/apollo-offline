@@ -12,6 +12,7 @@ export type Input = {
   store: Store,
   cache: ApolloCache,
   detectNetwork: () => boolean,
+  showError: (error: any) => void,
 };
 
 export type Options = Input & ApolloLink.Options;
@@ -20,7 +21,7 @@ export default class OfflineLink extends ApolloLink {
   store: Store;
 
   constructor(options: Options) {
-    const { store, cache } = options;
+    const { store, cache, showError } = options;
 
     super((operation: Operation, forward: NextLink) => {
       const { requireOnline = false } = operation.getContext();
@@ -46,7 +47,7 @@ export default class OfflineLink extends ApolloLink {
         const isQuery = operationType === "query";
 
         if (!online && isQuery) {
-          const data = processOfflineQuery(operation, store, cache);
+          const data = processOfflineQuery(operation, store, cache, showError);
           return finish(data);
         }
 
@@ -72,7 +73,7 @@ export default class OfflineLink extends ApolloLink {
   }
 }
 
-const processOfflineQuery = (operation, store, cache) => {
+const processOfflineQuery = (operation, store, cache, showError) => {
   const { query, variables } = operation;
 
   try {
@@ -84,6 +85,7 @@ const processOfflineQuery = (operation, store, cache) => {
 
     return queryData;
   } catch (error) {
+    showError(error);
     return null;
   }
 };

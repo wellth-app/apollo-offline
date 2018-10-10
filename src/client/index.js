@@ -23,6 +23,7 @@ export type Input = {
   /// Callback to be invoked when the redux-offline store is rehydrated.
   persistCallback?: () => void,
   detectNetwork?: (callback: NetworkCallback) => void,
+  showError?: () => void,
 };
 
 export type Options = Input & ApolloClientOptions;
@@ -37,6 +38,9 @@ export default class ApolloOfflineClient extends ApolloClient {
       middleware = [],
       offlineLinks = [],
       onlineLinks = [],
+      showError = (error: any) => {
+        console.error(error); //eslint-disable-line no-console
+      },
       ...clientOptions
     } = options;
     const { cache } = clientOptions;
@@ -60,6 +64,7 @@ export default class ApolloOfflineClient extends ApolloClient {
           store,
           cache,
           detectNetwork: () => networkConnected(store.getState()),
+          showError,
         }),
         ...onlineLinks,
       ]),
