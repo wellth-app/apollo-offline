@@ -3,7 +3,7 @@ import { Action, Store, Middleware } from "redux";
 import ApolloClient, {
   MutationOptions,
   ApolloClientOptions,
-} from "apollo-client";
+} from "apollo-boost";
 import { getOperationDefinition, variablesInOperation } from "apollo-utilities";
 import { ApolloLink } from "apollo-link";
 import { RESET_STATE } from "@redux-offline/redux-offline/lib/constants";

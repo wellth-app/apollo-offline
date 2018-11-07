@@ -1,5 +1,5 @@
 // @flow
-import { ApolloClient } from "apollo-client";
+import { ApolloClient } from "apollo-boost";
 import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
 import { ApolloCache } from "apollo-cache";
 import { getOperationDefinition } from "apollo-utilities";
