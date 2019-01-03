@@ -1,4 +1,3 @@
-// @flow
 import { REHYDRATE_STORE } from "../actions/rehydrateStore";
 
 export type State = boolean;
