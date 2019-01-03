@@ -1,8 +1,11 @@
 {
   "name": "@wellth/apollo-offline",
-  "version": "1.0.14-2",
+  "version": "1.1.0",
   "description": "A redux-offline implementation of Apollo 2.0.",
   "main": "lib/index.js",
+  "files": [
+    "lib/"
+  ],
   "author": "Justin Makaila",
   "license": "ISC",
   "repository": {
@@ -14,14 +17,9 @@
     "lint": "eslint src/",
     "prettier": "prettier --write \"{src,__{tests,mocks,mockData}__}/**/*.js\""
   },
-  "files": [
-    "lib/"
-  ],
   "dependencies": {
     "@redux-offline/redux-offline": "^2.5.1",
-    "apollo-boost": "^0.1.20",
-    "redux": "^3.7.2",
-    "redux-thunk": "^2.2.0"
+    "apollo-boost": "^0.1.23"
   },
   "devDependencies": {
     "eslint": "^4.19.1",
@@ -30,10 +28,13 @@
     "eslint-plugin-flowtype": "^2.46.3",
     "eslint-plugin-import": "^2.11.0",
     "eslint-plugin-prettier": "^2.6.0",
+    "redux": "^4.0.1",
+    "redux-thunk": "^2.3.0",
     "typescript": "^3.2.2",
     "prettier-eslint": "^8.8.1"
   },
-  "resolutions": {
-    "apollo-utilities": "1.0.21-0"
+  "peerDependencies": {
+    "redux": "*",
+    "redux-thunk": "^2.3.0"
   }
 }

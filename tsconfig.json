@@ -8,23 +8,25 @@
     "removeComments": true,
     "noImplicitAny": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
+    "noEmitOnError": true,
+    "downlevelIteration": true,
     "skipLibCheck": true,
     "moduleResolution": "node",
-    "target": "es5",
-    "module": "es2015",
+    "target": "es6",
+    "module": "commonjs",
     "lib": [
-      "es2015"
+      "dom",
+      "es6"
     ],
   },
   "include": [
     "src/**/*.ts"
   ],
   "exclude": [
+    "lib",
     "src/**/__tests__/*.ts",
     "src/**/__mocks__/*.ts",
     "node_modules",
-  ]
+  ],
+  "compileOnSave": true
 }

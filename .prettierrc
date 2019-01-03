@@ -5,7 +5,7 @@
   "tabWidth": 2,
   "trailingComma": "all",
   "jsxBracketSameLine": false,
-  "parser": "flow",
+  "parser": "typescript",
   "semi": true,
-  "singleQuote": false,
+  "singleQuote": false
 }

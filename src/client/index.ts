@@ -1,4 +1,3 @@
-// @flow
 import { Action, Store, Middleware } from "redux";
 import ApolloClient, {
   MutationOptions,
@@ -6,51 +5,57 @@ import ApolloClient, {
 } from "apollo-client";
 import { getOperationDefinition, variablesInOperation } from "apollo-utilities";
 import { ApolloLink } from "apollo-link";
-import { RESET_STATE } from "@redux-offline/redux-offline/lib/constants";
-import type { NetworkCallback } from "@redux-offline/redux-offline";
-import OfflineLink, { offlineEffect, discard } from "links/offline";
-import { REHYDRATE_STORE } from "actions/rehydrateStore";
-import { createOfflineStore } from "store";
-import networkConnected from "selectors/networkConnected";
+import { NetworkCallback } from "@redux-offline/redux-offline/lib/types";
+import OfflineLink, { offlineEffect, discard } from "../links/offline";
+import { REHYDRATE_STORE } from "../actions/rehydrateStore";
+import { createOfflineStore } from "../store";
+import networkConnected from "../selectors/networkConnected";
+import { NormalizedCacheObject } from "apollo-boost";
 
-export type Input = {
+export interface Options {
+  disableOffline?: boolean;
   /// Middleware for the redux-offline store.
-  middleware?: Middleware[],
+  middleware?: Middleware[];
   /// Links executed before the offline cache.
-  offlineLinks?: ApolloLink[],
+  offlineLinks?: ApolloLink[];
   /// Links executed after the offline cache but before the network.
-  onlineLinks?: ApolloLink[],
+  onlineLinks?: ApolloLink[];
   /// Callback to be invoked when the redux-offline store is rehydrated.
-  persistCallback?: () => void,
-  detectNetwork?: (callback: NetworkCallback) => void,
-};
+  persistCallback?: () => void;
+  detectNetwork?: (callback: NetworkCallback) => void;
+}
 
-export type Options = Input & ApolloClientOptions;
+const RESET_STATE = "Offline/RESET_STATE";
 
-export default class ApolloOfflineClient extends ApolloClient {
-  reduxStore: Store;
+export default class ApolloOfflineClient<
+  T extends NormalizedCacheObject
+> extends ApolloClient<T> {
+  private _store: Store;
+  private _disableOffline: boolean;
 
-  constructor(options: Options) {
-    const {
+  constructor(
+    {
+      disableOffline = false,
       persistCallback = () => {},
       detectNetwork,
       middleware = [],
       offlineLinks = [],
       onlineLinks = [],
-      ...clientOptions
-    } = options;
-    const { cache } = clientOptions;
-
-    const store = createOfflineStore({
-      middleware,
-      persistCallback: () => {
-        store.dispatch({ type: REHYDRATE_STORE });
-        persistCallback();
-      },
-      effect: (effect, action: Action) => offlineEffect(this, effect), // eslint-disable-line no-unused-vars
-      discard,
-      detectNetwork,
-    });
+    }: Options,
+    clientOptions?: ApolloClientOptions<T>,
+  ) {
+    const store = disableOffline
+      ? null
+      : createOfflineStore({
+          middleware,
+          persistCallback: () => {
+            store.dispatch({ type: REHYDRATE_STORE });
+            persistCallback();
+          },
+          effect: (effect, action: Action) => offlineEffect(this, effect),
+          discard,
+          detectNetwork,
+        });
 
     super({
       ...clientOptions,
@@ -58,22 +63,25 @@ export default class ApolloOfflineClient extends ApolloClient {
         ...offlineLinks,
         new OfflineLink({
           store,
-          cache,
           detectNetwork: () => networkConnected(store.getState()),
         }),
         ...onlineLinks,
       ]),
     });
 
-    this.reduxStore = store;
+    this._store = store;
+    this._disableOffline = disableOffline;
   }
 
-  reset = async () => {
-    this.reduxStore.dispatch({ type: RESET_STATE });
+  isOfflineEnabled() {
+    return !this._disableOffline;
+  }
 
+  async reset() {
+    this._store.dispatch({ type: RESET_STATE });
     await this.cache.reset();
     await this.resetStore();
-  };
+  }
 
   mutate(options: MutationOptions) {
     const {
@@ -86,10 +94,13 @@ export default class ApolloOfflineClient extends ApolloClient {
 
     const operationDefinition = getOperationDefinition(mutation);
     const operationVariables = variablesInOperation(operationDefinition);
-    const variables = [...operationVariables].reduce((object, key) => {
-      object[key] = mutationVariables[key];
-      return object;
-    }, {});
+    const variables = [...operationVariables].reduce(
+      (object: any, key: string) => {
+        object[key] = mutationVariables[key];
+        return object;
+      },
+      {},
+    );
 
     const { execute: executeMutation } = originalOfflineContext;
     const { refetchQueries, ...otherOptions } = options;
