@@ -1,6 +1,6 @@
 {
   "name": "@wellth/apollo-offline",
-  "version": "1.1.0",
+  "version": "1.1.0-2",
   "description": "A redux-offline implementation of Apollo 2.0.",
   "main": "lib/index.js",
   "files": [
@@ -15,7 +15,9 @@
   "scripts": {
     "build": "tsc",
     "build-and-watch": "tsc -w",
+    "clean": "rimraf lib/",
     "lint": "eslint ./src/**/*.ts",
+    "prepublish": "npm run clean && npm run build",
     "prettier": "prettier --write \"{src,__{tests,mocks,mockData}__}/**/*.js\""
   },
   "dependencies": {
@@ -31,6 +33,7 @@
     "prettier-eslint": "^8.8.1",
     "redux": "^4.0.1",
     "redux-thunk": "^2.3.0",
+    "rimraf": "^2.6.3",
     "typescript": "^3.2.2",
     "typescript-eslint-parser": "^21.0.2"
   },
