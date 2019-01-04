@@ -1,21 +1,18 @@
 module.exports = {
+  parser: "typescript-eslint-parser",
+  plugins: ["typescript", "prettier"],
   extends: ["prettier"],
-  parser: "babel-eslint",
   parserOptions: {
     ecmaVersion: 6,
-    ecmaFeatures: {
-      jsx: true,
-    },
   },
   env: {
     es6: true,
+    node: true,
   },
   overrides: {
     files: "src/**/*.js",
   },
   rules: {
-    // Error for unused vars or imports
-    "no-unused-vars": 2,
     // Error on console statements
     "no-console": 2,
     // No duplicate cases in switch statements
@@ -28,6 +25,8 @@ module.exports = {
     "no-unexpected-multiline": 2,
     // No unreachable code
     "no-unreachable": 2,
+    // Error for unused vars or imports
+    "no-unused-vars": 1,
     // Warn when re-assigning function parameters
     "no-param-reassign": 1,
     // Warn for "yoda" cases i.e. (-1 < someVariable)
@@ -38,8 +37,6 @@ module.exports = {
     "no-inner-declarations": 1,
     // Warn if no default case
     "default-case": 1,
-    "flowtype/define-flow-type": 1,
     "prettier/prettier": 2,
   },
-  plugins: ["babel", "flowtype", "prettier"],
 };

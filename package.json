@@ -14,27 +14,27 @@
   },
   "scripts": {
     "build": "tsc",
-    "lint": "eslint src/",
+    "build-and-watch": "tsc -w",
+    "lint": "eslint ./src/**/*.ts",
     "prettier": "prettier --write \"{src,__{tests,mocks,mockData}__}/**/*.js\""
   },
   "dependencies": {
     "@redux-offline/redux-offline": "^2.5.1",
-    "apollo-boost": "^0.1.23"
+    "apollo-client": "2.4.8",
+    "apollo-link": "1.2.6"
   },
   "devDependencies": {
-    "eslint": "^4.19.1",
-    "eslint-config-prettier": "^2.9.0",
-    "eslint-plugin-babel": "^5.1.0",
-    "eslint-plugin-flowtype": "^2.46.3",
-    "eslint-plugin-import": "^2.11.0",
-    "eslint-plugin-prettier": "^2.6.0",
+    "eslint": "^5.11.1",
+    "eslint-config-prettier": "^3.3.0",
+    "eslint-plugin-prettier": "^3.0.1",
+    "eslint-plugin-typescript": "^0.14.0",
+    "prettier-eslint": "^8.8.1",
     "redux": "^4.0.1",
     "redux-thunk": "^2.3.0",
     "typescript": "^3.2.2",
-    "prettier-eslint": "^8.8.1"
+    "typescript-eslint-parser": "^21.0.2"
   },
   "peerDependencies": {
-    "redux": "*",
     "redux-thunk": "^2.3.0"
   }
 }
