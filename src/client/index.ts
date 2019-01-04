@@ -1,4 +1,4 @@
-import { Action, Store, Middleware } from "redux";
+import { Store, Middleware } from "redux";
 import ApolloClient, {
   MutationOptions,
   ApolloClientOptions,
@@ -10,7 +10,6 @@ import OfflineLink, { offlineEffect, discard } from "../links/offline";
 import { REHYDRATE_STORE } from "../actions/rehydrateStore";
 import { createOfflineStore } from "../store";
 import networkConnected from "../selectors/networkConnected";
-import { NormalizedCacheObject } from "apollo-boost";
 
 export interface Options {
   disableOffline?: boolean;
@@ -27,14 +26,13 @@ export interface Options {
 
 const RESET_STATE = "Offline/RESET_STATE";
 
-export default class ApolloOfflineClient<
-  T extends NormalizedCacheObject
-> extends ApolloClient<T> {
+export default class ApolloOfflineClient<T> extends ApolloClient<T> {
   private _store: Store;
   private _disableOffline: boolean;
 
   constructor(
     {
+      // !!!: Unused right now... Will be used for selective cache and link creation
       disableOffline = false,
       persistCallback = () => {},
       detectNetwork,
@@ -42,23 +40,24 @@ export default class ApolloOfflineClient<
       offlineLinks = [],
       onlineLinks = [],
     }: Options,
-    clientOptions?: ApolloClientOptions<T>,
+    clientOptions?: Partial<ApolloClientOptions<T>>,
   ) {
-    const store = disableOffline
-      ? null
-      : createOfflineStore({
-          middleware,
-          persistCallback: () => {
-            store.dispatch({ type: REHYDRATE_STORE });
-            persistCallback();
-          },
-          effect: (effect, action: Action) => offlineEffect(this, effect),
-          discard,
-          detectNetwork,
-        });
+    const store: Store = createOfflineStore({
+      middleware,
+      persistCallback: () => {
+        store.dispatch({ type: REHYDRATE_STORE });
+        persistCallback();
+      },
+      effect: (effect) => offlineEffect(this, effect),
+      discard,
+      detectNetwork,
+    });
+
+    // TODO: Extend for custom cache strategies; the cache is provided in `clientOptions`, but can be null.
 
     super({
       ...clientOptions,
+      cache: clientOptions.cache,
       link: ApolloLink.from([
         ...offlineLinks,
         new OfflineLink({

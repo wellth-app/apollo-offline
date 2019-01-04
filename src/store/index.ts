@@ -4,13 +4,14 @@ import {
   compose,
   combineReducers,
   Middleware,
+  Store,
 } from "redux";
 import { offline } from "@redux-offline/redux-offline";
+import offlineConfig from "@redux-offline/redux-offline/lib/defaults";
 import {
   OfflineAction,
   NetworkCallback,
 } from "@redux-offline/redux-offline/lib/types";
-import offlineConfig from "@redux-offline/redux-offline/lib/defaults";
 import thunk from "redux-thunk";
 import reducers from "../reducers";
 
@@ -33,33 +34,27 @@ export interface Options {
   detectNetwork?: (callback: NetworkCallback) => void;
 }
 
-export const createOfflineStore = (options: Options) => {
-  const {
-    middleware,
+export const createOfflineStore = ({
+  middleware,
+  persistCallback,
+  effect,
+  discard,
+  detectNetwork = offlineConfig.detectNetwork,
+}: Options): Store => {
+  return offline({
+    ...offlineConfig,
     persistCallback,
+    persistOptions: {
+      blacklist: ["rehydrated"],
+    },
     effect,
     discard,
-    detectNetwork = offlineConfig.detectNetwork,
-  } = options;
-  const _middleware = [thunk, ...middleware];
-
-  return createStore(
+    detectNetwork,
+  })(createStore)(
     combineReducers(reducers),
     typeof window !== "undefined" &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__ &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__(),
-    compose(
-      applyMiddleware(..._middleware),
-      offline({
-        ...offlineConfig,
-        persistCallback,
-        persistOptions: {
-          blacklist: ["rehydrated"],
-        },
-        effect,
-        discard,
-        detectNetwork,
-      }),
-    ),
+    compose(applyMiddleware(thunk, ...middleware)),
   );
 };

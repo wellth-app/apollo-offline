@@ -1,5 +1,4 @@
 // @flow
-import { NormalizedCacheObject } from "apollo-boost";
 import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
 import { getOperationDefinition } from "apollo-utilities";
 import { Action, Store } from "redux";
@@ -28,38 +27,46 @@ export default class OfflineLink extends ApolloLink {
     this.store = store;
     this.detectNetwork = detectNetwork;
   }
+
   request(operation: Operation, forward: NextLink) {
     const { requireOnline = false } = operation.getContext();
     if (requireOnline) {
       return forward(operation);
     }
+
     return new Observable((observer) => {
       const finish = (data: any): (() => void) => {
         observer.next({ data });
         observer.complete();
         return () => null;
       };
+
       const online = this.detectNetwork();
       const { operation: operationType } = getOperationDefinition(
         operation.query,
       );
+
       const isMutation = operationType === OPERATION_TYPE_MUTATION;
       const isQuery = operationType === OPERATION_TYPE_QUERY;
+
       if (!online && isQuery) {
         const data = processOfflineQuery(operation);
         return finish(data);
       }
+
       if (isMutation) {
         const data = processMutation(operation, this.store);
         if (data) {
           return finish(data);
         }
       }
+
       const handle = forward(operation).subscribe({
         next: observer.next.bind(observer),
         error: observer.error.bind(observer),
         complete: observer.complete.bind(observer),
       });
+
       return () => {
         if (handle) handle.unsubscribe();
       };
@@ -67,9 +74,8 @@ export default class OfflineLink extends ApolloLink {
   }
 }
 
-const processOfflineQuery = (operation: Operation) => {
-  const { query, variables } = operation;
-  const { cache } = operation.getContext();
+const processOfflineQuery = ({ query, variables, getContext }: Operation) => {
+  const { cache } = getContext();
 
   try {
     const queryData = cache.readQuery({
@@ -125,7 +131,7 @@ const processMutation = (operation: Operation, store: Store) => {
   return data;
 };
 
-export const offlineEffect = async <T extends NormalizedCacheObject>(
+export const offlineEffect = async <T>(
   client: ApolloOfflineClient<T>,
   effect: any,
 ) => {

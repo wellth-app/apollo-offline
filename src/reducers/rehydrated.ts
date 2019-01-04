@@ -1,12 +1,8 @@
+import { Action } from "redux";
 import { REHYDRATE_STORE } from "../actions/rehydrateStore";
 
 export type State = boolean;
-export type Action = {
-  type: string,
-  payload: State,
-};
-
-export const InitialState = false;
+const InitialState = false;
 
 export default (state: State = InitialState, action: Action) => {
   switch (action.type) {
