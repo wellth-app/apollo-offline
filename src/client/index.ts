@@ -12,13 +12,13 @@ import { createOfflineStore } from "../store";
 import networkConnected from "../selectors/networkConnected";
 
 export interface Options {
-  disableOffline?: boolean;
+  // disableOffline?: boolean;
   /// Middleware for the redux-offline store.
   middleware?: Middleware[];
-  /// Links executed before the offline cache.
-  offlineLinks?: ApolloLink[];
-  /// Links executed after the offline cache but before the network.
-  onlineLinks?: ApolloLink[];
+  /// Link executed before the offline cache.
+  offlineLink?: ApolloLink;
+  /// Link executed after the offline cache.
+  onlineLink?: ApolloLink;
   /// Callback to be invoked when the redux-offline store is rehydrated.
   persistCallback?: () => void;
   detectNetwork?: (callback: NetworkCallback) => void;
@@ -28,17 +28,17 @@ const RESET_STATE = "Offline/RESET_STATE";
 
 export default class ApolloOfflineClient<T> extends ApolloClient<T> {
   private _store: Store;
-  private _disableOffline: boolean;
+  // private _disableOffline: boolean;
 
   constructor(
     {
       // !!!: Unused right now... Will be used for selective cache and link creation
-      disableOffline = false,
+      // disableOffline = false,
       persistCallback = () => {},
       detectNetwork,
       middleware = [],
-      offlineLinks = [],
-      onlineLinks = [],
+      offlineLink = null,
+      onlineLink = null,
     }: Options,
     clientOptions?: Partial<ApolloClientOptions<T>>,
   ) {
@@ -58,23 +58,25 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
     super({
       ...clientOptions,
       cache: clientOptions.cache,
-      link: ApolloLink.from([
-        ...offlineLinks,
-        new OfflineLink({
-          store,
-          detectNetwork: () => networkConnected(store.getState()),
-        }),
-        ...onlineLinks,
-      ]),
+      link: ApolloLink.from(
+        [
+          offlineLink,
+          new OfflineLink({
+            store,
+            detectNetwork: () => networkConnected(store.getState()),
+          }),
+          onlineLink,
+        ].filter((link) => link as ApolloLink),
+      ),
     });
 
     this._store = store;
-    this._disableOffline = disableOffline;
+    // this._disableOffline = disableOffline;
   }
 
-  isOfflineEnabled() {
-    return !this._disableOffline;
-  }
+  // isOfflineEnabled() {
+  //   return !this._disableOffline;
+  // }
 
   async reset() {
     this._store.dispatch({ type: RESET_STATE });

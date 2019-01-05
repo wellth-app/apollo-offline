@@ -1,5 +1,6 @@
 // @flow
 import ApolloOfflineClient from "@wellth/apollo-offline";
+import { ApolloLink } from "apollo-link";
 import { AsyncStorage } from "react-native";
 import { InMemoryCache } from "apollo-cache-inmemory";
 import { HttpLink } from "apollo-link-http";
@@ -15,12 +16,8 @@ persistCache({ cache, storage: AsyncStorage });
 
 const apiClient = new ApolloOfflineClient(
   {
-    offlineLinks: [
-      /// Links to be executed whether or not the request hits the network.
-      /// Usually side-effects and logging.
-      Logger,
-    ],
-    onlineLinks: [
+    offlineLink: Logger,
+    onlineLink: ApolloLink.from([
       /// Links to be executed iff the request hits the network
       AuthenticationLink({
         getToken: () => "123456abcdef",
@@ -31,7 +28,7 @@ const apiClient = new ApolloOfflineClient(
       new HttpLink({
         uri,
       }),
-    ],
+    ]),
     persistCallback: () => {
       console.log("Persistence was successfully loaded");
     },
