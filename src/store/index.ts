@@ -40,21 +40,23 @@ export const createOfflineStore = ({
   effect,
   discard,
   detectNetwork = offlineConfig.detectNetwork,
-}: Options): Store => {
-  return offline({
-    ...offlineConfig,
-    persistCallback,
-    persistOptions: {
-      blacklist: ["rehydrated"],
-    },
-    effect,
-    discard,
-    detectNetwork,
-  })(createStore)(
+}: Options): Store<any> =>
+  createStore(
     combineReducers(reducers),
     typeof window !== "undefined" &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__ &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__(),
-    compose(applyMiddleware(thunk, ...middleware)),
+    compose(
+      applyMiddleware(thunk, ...middleware),
+      offline({
+        ...offlineConfig,
+        persistCallback,
+        persistOptions: {
+          blacklist: ["rehydrated"],
+        },
+        effect,
+        discard,
+        detectNetwork,
+      }),
+    ),
   );
-};

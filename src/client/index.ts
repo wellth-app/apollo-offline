@@ -27,7 +27,7 @@ export interface Options {
 const RESET_STATE = "Offline/RESET_STATE";
 
 export default class ApolloOfflineClient<T> extends ApolloClient<T> {
-  private _store: Store;
+  private _store: Store<any>;
   // private _disableOffline: boolean;
 
   constructor(
@@ -42,7 +42,7 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
     }: Options,
     clientOptions?: Partial<ApolloClientOptions<T>>,
   ) {
-    const store: Store = createOfflineStore({
+    const store: Store<any> = createOfflineStore({
       middleware,
       persistCallback: () => {
         store.dispatch({ type: REHYDRATE_STORE });

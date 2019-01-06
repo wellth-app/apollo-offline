@@ -1,13 +1,15 @@
 // @flow
 import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
 import { getOperationDefinition } from "apollo-utilities";
-import { Action, Store } from "redux";
+import { Action, Store as ReduxStore } from "redux";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
 import ApolloOfflineClient from "../client";
 
 type DetectNetwork = () => boolean;
+
+type Store = ReduxStore<any>;
 
 export interface Options {
   store: Store;
