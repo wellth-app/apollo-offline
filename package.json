@@ -1,6 +1,6 @@
 {
   "name": "@wellth/apollo-offline",
-  "version": "1.1.2-3",
+  "version": "1.1.2-4",
   "description": "A redux-offline implementation of Apollo 2.0.",
   "main": "lib/index.js",
   "files": [
@@ -36,5 +36,8 @@
     "rimraf": "^2.6.3",
     "typescript": "^3.2.2",
     "typescript-eslint-parser": "^21.0.2"
+  },
+  "peerDependencies": {
+    "redux-thunk": "^2.3.0"
   }
 }
