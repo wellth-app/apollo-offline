@@ -1,27 +1,37 @@
-// @flow
 import ApolloOfflineClient from "@wellth/apollo-offline";
 import { ApolloLink } from "apollo-link";
-import { AsyncStorage } from "react-native";
-import { InMemoryCache } from "apollo-cache-inmemory";
+import {
+  InMemoryCache,
+  IntrospectionFragmentMatcher,
+  defaultDataIdFromObject,
+} from "apollo-cache-inmemory";
 import { HttpLink } from "apollo-link-http";
-import { persistCache } from "apollo-cache-persist";
 import Logger from "apollo-link-logger";
 import AuthenticationLink from "../links/authentication";
-
-const uri = "https://fakerql.com/graphql"; /// !!!: Add a URI
+import introspectionQueryResultData from "../config/fragmentTypes.json";
+import uri from "../config/api";
 
 /// Configure your cache as usual
-const cache = new InMemoryCache();
-persistCache({ cache, storage: AsyncStorage });
+const cache = new InMemoryCache({
+  fragmentMatcher: new IntrospectionFragmentMatcher({
+    introspectionQueryResultData,
+  }),
+  dataIdFromObject: (object) => {
+    console.log(object);
+    const id = defaultDataIdFromObject(object);
+    console.log("Computed ID:", id);
+    return id;
+  },
+});
 
-const apiClient = new ApolloOfflineClient(
+const client = new ApolloOfflineClient(
   {
     offlineLink: Logger,
     onlineLink: ApolloLink.from([
-      /// Links to be executed iff the request hits the network
+      // Links to be executed iff the request hits the network
       AuthenticationLink({
         getToken: () => "123456abcdef",
-        expired: (token) => false,
+        expired: () => false,
         format: (token) => `Bearer ${token}`,
         reauthenticate: async () => "67890ghijklm",
       }),
@@ -29,11 +39,8 @@ const apiClient = new ApolloOfflineClient(
         uri,
       }),
     ]),
-    persistCallback: () => {
-      console.log("Persistence was successfully loaded");
-    },
   },
   { cache },
 );
 
-export default apiClient;
+export default client;

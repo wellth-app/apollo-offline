@@ -5,7 +5,7 @@ export interface Props {
   loading: boolean;
   loadingMessage: string;
   placeholder: string;
-  data: string | undefined | null;
+  data: any;
 }
 
 export default ({ loading, loadingMessage, placeholder, data }: Props) => (
@@ -16,7 +16,7 @@ export default ({ loading, loadingMessage, placeholder, data }: Props) => (
         <Text>{loadingMessage}</Text>
       </View>
     ) : (
-      <Text>{data ? data : placeholder}</Text>
+      <Text>{data ? JSON.stringify(data) : placeholder}</Text>
     )}
   </ScrollView>
 );
