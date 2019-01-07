@@ -1,4 +1,3 @@
-// @flow
 import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
 import { getOperationDefinition } from "apollo-utilities";
 import { Action, Store as ReduxStore } from "redux";
@@ -63,11 +62,7 @@ export default class OfflineLink extends ApolloLink {
         }
       }
 
-      const handle = forward(operation).subscribe({
-        next: observer.next.bind(observer),
-        error: observer.error.bind(observer),
-        complete: observer.complete.bind(observer),
-      });
+      const handle = forward(operation).subscribe(observer);
 
       return () => {
         if (handle) handle.unsubscribe();

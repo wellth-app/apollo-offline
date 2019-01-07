@@ -9,6 +9,8 @@
     "removeComments": true,
     "noUnusedLocals": true,
     "noEmitOnError": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "downlevelIteration": true,
     "skipLibCheck": true,
     "experimentalDecorators": true,

@@ -2,9 +2,12 @@
   "name": "@wellth/apollo-offline-example",
   "version": "0.1.0",
   "private": true,
+  "main": "lib/index.js",
+  "files": ["lib"],
   "scripts": {
-    "build": "tsc",
+    "build": "yarn run download-introspection && tsc",
     "start": "concurrently -r 'yarn run build -w' 'react-native start'",
+    "download-introspection": "node scripts/downloadIntrospection.js",
     "android": "react-native run-android",
     "ios": "react-native run-ios"
   },
@@ -12,7 +15,7 @@
     "preset": "react-native"
   },
   "dependencies": {
-    "@wellth/apollo-offline": "^1.1.2-4",
+    "@wellth/apollo-offline": "^1.1.2-5",
     "apollo-cache-persist": "^0.1.1",
     "apollo-link-context": "^1.0.12",
     "apollo-link-logger": "^1.2.3",
@@ -29,6 +32,7 @@
     "@types/react": "^16.7.18",
     "@types/react-native": "^0.57.25",
     "@types/react-redux": "^6.0.12",
-    "concurrently": "^4.1.0"
+    "concurrently": "^4.1.0",
+    "typescript": "^3.2.2"
   }
 }

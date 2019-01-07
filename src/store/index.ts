@@ -31,7 +31,7 @@ export interface Options {
   persistCallback: () => void;
   effect: NetworkEffect;
   discard: Discard;
-  detectNetwork?: (callback: NetworkCallback) => void;
+  detectNetwork: (callback: NetworkCallback) => void;
 }
 
 export const createOfflineStore = ({
