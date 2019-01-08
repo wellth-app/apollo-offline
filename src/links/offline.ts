@@ -6,7 +6,7 @@ import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
 import ApolloOfflineClient from "../client";
 
-type DetectNetwork = () => boolean;
+export type DetectNetwork = () => boolean;
 
 type Store = ReduxStore<any>;
 
@@ -132,6 +132,8 @@ export const offlineEffect = async <T>(
   client: ApolloOfflineClient<T>,
   effect: any,
 ) => {
+  await client.hydrated();
+
   const {
     mutation,
     variables,

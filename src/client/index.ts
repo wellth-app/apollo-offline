@@ -12,16 +12,34 @@ import { REHYDRATE_STORE } from "../actions/rehydrateStore";
 import { createOfflineStore } from "../store";
 import networkConnected from "../selectors/networkConnected";
 
+const createNetworkLink = (
+  store: Store<any>,
+  disableOffline: boolean = false,
+  offlineLink?: ApolloLink,
+  onlineLink?: ApolloLink,
+) =>
+  ApolloLink.from(
+    [
+      offlineLink,
+      disableOffline
+        ? null
+        : new OfflineLink({
+            store,
+            detectNetwork: () => networkConnected(store.getState()),
+          }),
+      onlineLink,
+    ].filter(Boolean),
+  );
+
 export interface Options {
-  // disableOffline?: boolean;
+  /// If true, disables offline behavior, and only executes `onlineLink`
+  disableOffline?: boolean;
   /// Middleware for the redux-offline store.
   reduxMiddleware?: Middleware[];
   /// Link executed before the offline cache.
   offlineLink?: ApolloLink;
   /// Link executed after the offline cache.
   onlineLink?: ApolloLink;
-  /// Callback to be invoked when the redux-offline store is rehydrated.
-  persistCallback?: () => void;
   /// Callback utilized for detecting network connectivity.
   detectNetwork?: (callback: NetworkCallback) => void;
 }
@@ -33,7 +51,7 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
 
   // Resolves when `@redux-offline` rehydrates
   private hydratedPromise: Promise<ApolloOfflineClient<T>>;
-  // private _disableOffline: boolean;
+  private _disableOffline: boolean;
 
   hydrated() {
     return this.hydratedPromise;
@@ -41,14 +59,17 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
 
   constructor(
     {
-      // disableOffline = false,
-      persistCallback = () => {},
+      disableOffline = false,
       detectNetwork,
       reduxMiddleware = [],
       offlineLink = null,
       onlineLink = null,
     }: Options,
-    clientOptions?: Partial<ApolloClientOptions<T>>,
+    {
+      cache: customCache = undefined,
+      link: customLink = undefined,
+      ...clientOptions
+    }: Partial<ApolloClientOptions<T>> = {},
   ) {
     let resolveClient: (
       client: ApolloOfflineClient<T> | PromiseLike<ApolloOfflineClient<T>>,
@@ -62,25 +83,28 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
     // ???: Should we fail if offline is disabled and no `onlineLink`?
 
     // TODO: if `disableOffline`, don't create the store
-    const store: Store<any> = createOfflineStore({
-      middleware: reduxMiddleware,
-      persistCallback: () => {
-        store.dispatch({ type: REHYDRATE_STORE });
-        resolveClient(this);
-        persistCallback();
-      },
-      effect: (effect) => offlineEffect(this, effect),
-      discard,
-      detectNetwork,
-    });
+    const store: Store<any> = disableOffline
+      ? null
+      : createOfflineStore({
+          middleware: reduxMiddleware,
+          persistCallback: () => {
+            store.dispatch({ type: REHYDRATE_STORE });
+            resolveClient(this);
+          },
+          effect: (effect) => offlineEffect(this, effect),
+          discard,
+          detectNetwork,
+        });
 
     // !!!: The "offline cache" mentioned in the comment below doesn't exist
     // TODO: if `disableOffline`, use the provided custom cache, or create an InMemoryCache,
     //       otherwise create a new offline cache.
-    const cache = clientOptions.cache;
+    // !!!: The default behavior, right now, is to use the provided cache
+    const cache = disableOffline ? null : customCache;
 
-    // Create the link with a `RehydrateLink` as the first link
-    // to ensure requests are queued until rehydration
+    // !!!: Create the link with a `RehydrateLink` as the first link
+    // to ensure requests are queued until rehydration. This will be the first link
+    // whether we use `clientOptions.link` or the default link stack.
     const link = ApolloLink.from([
       new ApolloLink((operation, forward) => {
         let handle: ZenObservable.Subscription = null;
@@ -98,12 +122,9 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
           };
         });
       }),
-      offlineLink,
-      new OfflineLink({
-        store,
-        detectNetwork: () => networkConnected(store.getState()),
-      }),
-      onlineLink,
+      !!customLink
+        ? customLink
+        : createNetworkLink(store, disableOffline, offlineLink, onlineLink),
     ]);
 
     super({
@@ -113,14 +134,15 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
     });
 
     this._store = store;
+    this._disableOffline = disableOffline;
     this.hydratedPromise = new Promise((resolve) => {
       resolveClient = resolve;
     });
   }
 
-  // isOfflineEnabled() {
-  //   return !this._disableOffline;
-  // }
+  isOfflineEnabled() {
+    return !this._disableOffline;
+  }
 
   async reset() {
     this._store.dispatch({ type: RESET_STATE });
