@@ -3,30 +3,31 @@ import { ApolloLink } from "apollo-link";
 import {
   InMemoryCache,
   IntrospectionFragmentMatcher,
-  defaultDataIdFromObject,
 } from "apollo-cache-inmemory";
+import { withClientState } from "apollo-link-state";
 import { HttpLink } from "apollo-link-http";
 import Logger from "apollo-link-logger";
 import AuthenticationLink from "../links/authentication";
 import introspectionQueryResultData from "../config/fragmentTypes.json";
 import uri from "../config/api";
+import resolvers from "../graphql/resolvers";
 
 /// Configure your cache as usual
 const cache = new InMemoryCache({
   fragmentMatcher: new IntrospectionFragmentMatcher({
     introspectionQueryResultData,
   }),
-  dataIdFromObject: (object) => {
-    console.log(object);
-    const id = defaultDataIdFromObject(object);
-    console.log("Computed ID:", id);
-    return id;
-  },
 });
 
 const client = new ApolloOfflineClient(
   {
-    offlineLink: Logger,
+    offlineLink: ApolloLink.from([
+      Logger,
+      withClientState({
+        cache,
+        ...resolvers,
+      }),
+    ]),
     onlineLink: ApolloLink.from([
       // Links to be executed iff the request hits the network
       AuthenticationLink({
