@@ -1,6 +1,6 @@
 {
   "name": "@wellth/apollo-offline",
-  "version": "1.1.2-6",
+  "version": "1.1.2",
   "description": "A redux-offline implementation of Apollo 2.0.",
   "main": "lib/index.js",
   "files": [
@@ -32,7 +32,7 @@
     "eslint-plugin-typescript": "^0.14.0",
     "graphql": "^14.0.2",
     "prettier-eslint": "^8.8.1",
-    "react-native":"^0.57.8",
+    "react-native": "^0.57.8",
     "redux": "^3.0.1",
     "redux-thunk": "^2.3.0",
     "rimraf": "^2.6.3",
@@ -40,9 +40,9 @@
     "typescript-eslint-parser": "^21.0.2"
   },
   "peerDependencies": {
-    "redux-thunk": "^2.3.0",
     "apollo-client": ">=2",
     "apollo-link": ">=1",
-    "graphql": "^14.0.2"
+    "graphql": "^14.0.2",
+    "redux-thunk": "^2.3.0"
   }
 }
