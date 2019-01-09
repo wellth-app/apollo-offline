@@ -14,14 +14,16 @@
   },
   "scripts": {
     "build": "tsc",
-    "build-and-watch": "tsc -w",
+    "build:watch": "tsc -w",
     "clean": "rimraf lib/",
     "lint": "eslint ./src/**/*.ts",
-    "prepublish": "npm run clean && npm run build",
-    "prettier": "prettier --write \"{src,__{tests,mocks,mockData}__}/**/*.js\""
+    "prebuild": "npm run clean",
+    "prepublish": "npm run build",
+    "prettier": "prettier --write 'src/**/*.js'"
   },
   "dependencies": {
-    "@redux-offline/redux-offline": "^2.5.1"
+    "@redux-offline/redux-offline": "^2.5.1",
+    "redux-thunk": "^2.3.0"
   },
   "devDependencies": {
     "apollo-client": "2.4.8",
@@ -34,7 +36,6 @@
     "prettier-eslint": "^8.8.1",
     "react-native": "^0.57.8",
     "redux": "^3.0.1",
-    "redux-thunk": "^2.3.0",
     "rimraf": "^2.6.3",
     "typescript": "^3.2.2",
     "typescript-eslint-parser": "^21.0.2"
@@ -42,7 +43,6 @@
   "peerDependencies": {
     "apollo-client": ">=2",
     "apollo-link": ">=1",
-    "graphql": "^14.0.2",
-    "redux-thunk": "^2.3.0"
+    "graphql": "^14.0.2"
   }
 }
