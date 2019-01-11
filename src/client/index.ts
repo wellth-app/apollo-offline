@@ -151,6 +151,10 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
   }
 
   mutate(options: MutationOptions) {
+    if (this._disableOffline) {
+      return super.mutate(options);
+    }
+
     const {
       mutation,
       variables: mutationVariables,

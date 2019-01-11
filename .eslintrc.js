@@ -10,7 +10,7 @@ module.exports = {
     node: true,
   },
   overrides: {
-    files: "src/**/*.js",
+    files: "src/**/*.ts",
   },
   rules: {
     // Error on console statements
