@@ -166,10 +166,10 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
     const operationDefinition = getOperationDefinition(mutation);
     const operationVariables = variablesInOperation(operationDefinition);
     const variables = [...operationVariables].reduce(
-      (object: any, key: string) => {
-        object[key] = mutationVariables[key];
-        return object;
-      },
+      (object: any, key: string) => ({
+        ...object,
+        [key]: mutationVariables[key],
+      }),
       {},
     );
 
