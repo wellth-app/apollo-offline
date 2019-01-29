@@ -100,7 +100,8 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
     // TODO: if `disableOffline`, use the provided custom cache, or create an InMemoryCache,
     //       otherwise create a new offline cache.
     // !!!: The default behavior, right now, is to use the provided cache
-    const cache = disableOffline ? null : customCache;
+    // const cache = disableOffline ? (customCache || new InMemoryCache()) : new OfflineCache()
+    const cache = customCache;
 
     // !!!: Create the link with a `RehydrateLink` as the first link
     // to ensure requests are queued until rehydration. This will be the first link
@@ -135,9 +136,11 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
 
     this._store = store;
     this._disableOffline = disableOffline;
-    this.hydratedPromise = new Promise((resolve) => {
-      resolveClient = resolve;
-    });
+    this.hydratedPromise = disableOffline
+      ? Promise.resolve(this)
+      : new Promise((resolve) => {
+          resolveClient = resolve;
+        });
   }
 
   isOfflineEnabled() {
