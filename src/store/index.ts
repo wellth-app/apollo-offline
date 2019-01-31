@@ -32,6 +32,8 @@ export interface Options {
   effect: NetworkEffect;
   discard: Discard;
   detectNetwork: (callback: NetworkCallback) => void;
+  /// TODO: Figure out wtf AsyncStorage conforms to and do that
+  storage: any | undefined;
 }
 
 export const createOfflineStore = ({
@@ -40,6 +42,7 @@ export const createOfflineStore = ({
   effect,
   discard,
   detectNetwork = offlineConfig.detectNetwork,
+  storage = undefined,
 }: Options): Store<any> =>
   createStore(
     combineReducers(reducers),
@@ -53,6 +56,7 @@ export const createOfflineStore = ({
         persistCallback,
         persistOptions: {
           blacklist: ["rehydrated"],
+          storage,
         },
         effect,
         discard,
