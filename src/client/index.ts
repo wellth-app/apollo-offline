@@ -4,7 +4,7 @@ import ApolloClient, {
   ApolloClientOptions,
 } from "apollo-client";
 import { getOperationDefinition, variablesInOperation } from "apollo-utilities";
-import { ApolloLink, Observable } from "apollo-link";
+import { ApolloLink, Observable, Operation, NextLink } from "apollo-link";
 import { NetworkCallback } from "@redux-offline/redux-offline/lib/types";
 import OfflineLink, { offlineEffect, discard } from "../links/offline";
 import passthroughLink from "../links/passthrough";
@@ -31,6 +31,14 @@ const createNetworkLink = (
     ].filter(Boolean),
   );
 
+export type OfflineCallback = (error: any, success: any) => void;
+
+export interface OfflineConfig {
+  // The number of times to retry a request
+  maxRetryCount?: number;
+  callback?: OfflineCallback;
+}
+
 export interface Options {
   /// If true, disables offline behavior, and only executes `onlineLink`
   disableOffline?: boolean;
@@ -42,6 +50,8 @@ export interface Options {
   onlineLink?: ApolloLink;
   /// Callback utilized for detecting network connectivity.
   detectNetwork?: (callback: NetworkCallback) => void;
+  /// Configuration for offline behavior.
+  offlineConfig?: OfflineConfig;
 }
 
 const RESET_STATE = "Offline/RESET_STATE";
@@ -64,6 +74,10 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
       reduxMiddleware = [],
       offlineLink = null,
       onlineLink = null,
+      offlineConfig: {
+        maxRetryCount = 10,
+        callback: offlineCallback = () => {},
+      } = {},
     }: Options,
     {
       cache: customCache = undefined,
@@ -92,7 +106,7 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
             resolveClient(this);
           },
           effect: (effect) => offlineEffect(this, effect),
-          discard,
+          discard: discard(maxRetryCount, offlineCallback),
           detectNetwork,
         });
 
@@ -107,7 +121,7 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
     // to ensure requests are queued until rehydration. This will be the first link
     // whether we use `clientOptions.link` or the default link stack.
     const link = ApolloLink.from([
-      new ApolloLink((operation, forward) => {
+      new ApolloLink((operation: Operation, forward: NextLink) => {
         let handle: ZenObservable.Subscription = null;
         return new Observable((observer) => {
           this.hydratedPromise
