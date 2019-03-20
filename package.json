@@ -19,7 +19,7 @@
     "lint": "eslint ./src/**/*.ts",
     "prebuild": "npm run clean",
     "prepublish": "npm run build",
-    "prettier": "prettier --write 'src/**/*.js'"
+    "prettier": "prettier --write 'src/**/*.ts'"
   },
   "dependencies": {
     "@redux-offline/redux-offline": "^2.5.1",
