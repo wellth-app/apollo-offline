@@ -660,6 +660,11 @@
   resolved "http://npm.wellth-dev.com/@types%2fasync/-/async-2.0.50.tgz#117540e026d64e1846093abbd5adc7e27fda7bcb"
   integrity sha512-VMhZMMQgV1zsR+lX/0IBfAk+8Eb7dPVMWiQGFAt3qjo5x7Ml6b77jUo0e1C3ToD+XRDXqtrfw+6AB0uUsPEr3Q==
 
+"@types/debug@^4.1.2":
+  version "4.1.2"
+  resolved "http://npm.wellth-dev.com/@types%2fdebug/-/debug-4.1.2.tgz#84824e9259fc583dd9385635738359c9582f7f82"
+  integrity sha512-jkf6UiWUjcOqdQbatbvOm54/YbCdjt3JjiAzT/9KS2XtMmOkYHdKsI5u8fulhbuTUuiqNBfa6J5GSDiwjK+zLA==
+
 "@types/zen-observable@^0.8.0":
   version "0.8.0"
   resolved "http://npm.wellth-dev.com/@types%2fzen-observable/-/zen-observable-0.8.0.tgz#8b63ab7f1aa5321248aad5ac890a485656dcea4d"
