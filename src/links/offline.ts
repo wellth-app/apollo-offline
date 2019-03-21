@@ -1,10 +1,14 @@
 import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
 import { getOperationDefinition } from "apollo-utilities";
 import { Action, Store as ReduxStore } from "redux";
+import { print } from "graphql/language/printer";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
 import ApolloOfflineClient, { OfflineCallback } from "../client";
+import { rootLogger } from "../utils";
+
+const logger = rootLogger.extend("offline-link");
 
 export type DetectNetwork = () => boolean;
 
@@ -107,18 +111,22 @@ const processMutation = (operation: Operation, store: Store) => {
         : optimisticResponse)) ||
     null;
 
+  const effect = {
+    mutation,
+    variables,
+    refetchQueries,
+    context,
+    execute: true,
+  };
+
+  logger("Enqueing mutation effect", { ...effect, mutation: print(mutation) });
+
   store.dispatch({
     type: QUEUE_OPERATION,
     payload: {},
     meta: {
       offline: {
-        effect: {
-          mutation,
-          variables,
-          refetchQueries,
-          context,
-          execute: true,
-        },
+        effect,
         commit: { type: QUEUE_OPERATION_COMMIT, meta: null },
         rollback: { type: QUEUE_OPERATION_ROLLBACK, meta: null },
       },
@@ -173,13 +181,20 @@ const shouldDiscard = (
   retries: number,
   maxRetryCount: number,
 ) => {
-  // If there are GraphQL errors, or network errors, discard the request
+  // If there are GraphQL errors, discard the request
   if (graphQLErrors.length) {
+    logger("Discarding action due to GraphQL errors", action, graphQLErrors);
     return true;
   }
 
   // If the network error status code >= 400, discard the request
   if (networkError.statusCode >= ERROR_STATUS_CODE) {
+    logger(
+      "Discarding action due to >= 400 status code",
+      action,
+      networkError.statusCode,
+    );
+
     return true;
   }
 

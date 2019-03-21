@@ -14,6 +14,9 @@ import {
 } from "@redux-offline/redux-offline/lib/types";
 import thunk from "redux-thunk";
 import reducers from "../reducers";
+import { rootLogger } from "../utils";
+
+const logger = rootLogger.extend("store");
 
 export type NetworkEffect = (
   effect: any,
@@ -40,8 +43,9 @@ export const createOfflineStore = ({
   effect,
   discard,
   detectNetwork = offlineConfig.detectNetwork,
-}: Options): Store<any> =>
-  createStore(
+}: Options): Store<any> => {
+  logger("Creating offline store");
+  return createStore(
     combineReducers(reducers),
     typeof window !== "undefined" &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__ &&
@@ -50,7 +54,10 @@ export const createOfflineStore = ({
       applyMiddleware(thunk, ...middleware),
       offline({
         ...offlineConfig,
-        persistCallback,
+        persistCallback: () => {
+          logger("Persistence loaded");
+          persistCallback();
+        },
         persistOptions: {
           blacklist: ["rehydrated"],
         },
@@ -60,3 +67,4 @@ export const createOfflineStore = ({
       }),
     ),
   );
+};
