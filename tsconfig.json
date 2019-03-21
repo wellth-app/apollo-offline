@@ -2,11 +2,11 @@
   "compilerOptions": {
     "outDir": "lib",
     "rootDir": "src",
+    "baseUrl": ".",
     "pretty": true,
     "declaration": true,
     "sourceMap": true,
     "removeComments": true,
-    "noImplicitAny": true,
     "noUnusedLocals": true,
     "noEmitOnError": true,
     "downlevelIteration": true,
