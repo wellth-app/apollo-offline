@@ -11,6 +11,9 @@ import passthroughLink from "../links/passthrough";
 import { REHYDRATE_STORE } from "../actions/rehydrateStore";
 import { createOfflineStore } from "../store";
 import networkConnected from "../selectors/networkConnected";
+import { rootLogger } from "../utils";
+
+const logger = rootLogger.extend("client");
 
 const createNetworkLink = (
   store: Store<any>,
@@ -166,6 +169,7 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
   }
 
   async reset() {
+    logger("Resetting client store and cache");
     this._store.dispatch({ type: RESET_STATE });
     await this.cache.reset();
     await this.resetStore();
