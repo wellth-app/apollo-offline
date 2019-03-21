@@ -4,7 +4,7 @@ import { Action, Store as ReduxStore } from "redux";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
-import ApolloOfflineClient from "../client";
+import ApolloOfflineClient, { OfflineCallback } from "../client";
 
 export type DetectNetwork = () => boolean;
 
@@ -130,44 +130,59 @@ const processMutation = (operation: Operation, store: Store) => {
 
 export const offlineEffect = async <T>(
   client: ApolloOfflineClient<T>,
-  effect: any,
-) => {
-  await client.hydrated();
-
-  const {
+  // TODO: Typings...
+  {
     mutation,
     variables,
     refetchQueries,
     execute,
     context: originalContext,
-  } = effect;
-
-  const context = {
-    ...originalContext,
-    offlineContext: {
-      execute,
-    },
-  };
-
-  const options = {
+  }: any,
+) => {
+  await client.hydrated();
+  return client.mutate({
     mutation,
     variables,
     refetchQueries,
-    context,
-  };
-
-  return client.mutate(options);
+    context: {
+      ...originalContext,
+      offlineContext: {
+        execute,
+      },
+    },
+  });
 };
 
-export const discard = (error: any, action: Action) => {
-  const { graphQLErrors = [] } = error;
-  if (graphQLErrors.length) {
-    return true;
-  } else {
-    if (error.networkError.statusCode >= ERROR_STATUS_CODE) {
-      return true;
-    }
+export const discard = (maxRetryCount: number, callback: OfflineCallback) => (
+  error: any,
+  action: Action,
+  retries: number,
+) => {
+  const discardResult = shouldDiscard(error, action, retries, maxRetryCount);
+
+  if (discardResult) {
+    callback(error, null);
   }
 
-  return error.permanent;
+  return discardResult;
+};
+
+const shouldDiscard = (
+  { graphQLErrors = [], networkError, permanent }: any,
+  action: Action,
+  retries: number,
+  maxRetryCount: number,
+) => {
+  // If there are GraphQL errors, or network errors, discard the request
+  if (graphQLErrors.length) {
+    return true;
+  }
+
+  // If the network error status code >= 400, discard the request
+  if (networkError.statusCode >= ERROR_STATUS_CODE) {
+    return true;
+  }
+
+  // If the error is permanent or we've reached max retries, discard the request
+  return permanent || retries > maxRetryCount;
 };
