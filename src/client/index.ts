@@ -42,6 +42,8 @@ export interface Options {
   onlineLink?: ApolloLink;
   /// Callback utilized for detecting network connectivity.
   detectNetwork?: (callback: NetworkCallback) => void;
+  /// Storage client for persistence (default undefined)
+  storage: any | undefined;
 }
 
 const RESET_STATE = "Offline/RESET_STATE";
@@ -64,6 +66,7 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
       reduxMiddleware = [],
       offlineLink = null,
       onlineLink = null,
+      storage = undefined,
     }: Options,
     {
       cache: customCache = undefined,
@@ -94,6 +97,7 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
           effect: (effect) => offlineEffect(this, effect),
           discard,
           detectNetwork,
+          storage,
         });
 
     // !!!: The "offline cache" mentioned in the comment below doesn't exist
