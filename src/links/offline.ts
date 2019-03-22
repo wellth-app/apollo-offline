@@ -67,15 +67,7 @@ export default class OfflineLink extends ApolloLink {
       }
 
       logger("Executing operation on network", operation);
-      const handle = forward(operation).subscribe({
-        next: (value) => {
-          logger("Successfully executed operation:", value);
-          observer.next(value);
-          observer.complete();
-        },
-        error: observer.error.bind(observer),
-        complete: observer.complete.bind(observer),
-      });
+      const handle = forward(operation).subscribe(observer);
 
       return () => {
         if (handle) handle.unsubscribe();
