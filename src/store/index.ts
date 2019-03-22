@@ -36,7 +36,7 @@ export interface Options {
   discard: Discard;
   detectNetwork: (callback: NetworkCallback) => void;
   /// TODO: Figure out wtf AsyncStorage conforms to and do that
-  storage: any | undefined;
+  storage?: any;
 }
 
 export const createOfflineStore = ({

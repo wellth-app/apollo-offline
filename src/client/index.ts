@@ -54,7 +54,7 @@ export interface Options {
   /// Callback utilized for detecting network connectivity.
   detectNetwork?: (callback: NetworkCallback) => void;
   /// Storage client for persistence (default undefined)
-  storage: any | undefined;
+  storage?: any;
   /// Configuration for offline behavior.
   offlineConfig?: OfflineConfig;
 }
