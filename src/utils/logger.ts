@@ -1,10 +1,6 @@
 import debug from "debug";
 
-export type Logger = Function & {
-  extend(category: string): Logger;
-};
-
-const debugLogger = debug("apollo-offline") as Logger;
+const debugLogger = debug("apollo-offline");
 
 const extend = function(category = "") {
   const newCategory = category
