@@ -66,7 +66,16 @@ export default class OfflineLink extends ApolloLink {
         }
       }
 
-      const handle = forward(operation).subscribe(observer);
+      logger("Executing operation on network", operation);
+      const handle = forward(operation).subscribe({
+        next: (value) => {
+          logger("Successfully executed operation:", value);
+          observer.next(value);
+          observer.complete();
+        },
+        error: observer.error.bind(observer),
+        complete: observer.complete.bind(observer),
+      });
 
       return () => {
         if (handle) handle.unsubscribe();
@@ -119,7 +128,11 @@ const processMutation = (operation: Operation, store: Store) => {
     execute: true,
   };
 
-  logger("Enqueing mutation effect", { ...effect, mutation: print(mutation) });
+  logger("Enqueing mutation and returning optimistic response", {
+    variables,
+    optimisticResponse,
+    mutation: print(mutation),
+  });
 
   store.dispatch({
     type: QUEUE_OPERATION,
