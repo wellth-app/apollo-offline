@@ -69,8 +69,6 @@ export default class OfflineLink extends ApolloLink {
       logger("Executing operation on network", {
         query: print(operation.query),
         variables: operation.variables,
-        extensions: operation.extensions,
-        context: operation.getContext(),
       });
 
       const handle = forward(operation).subscribe(observer);
