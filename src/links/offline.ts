@@ -30,7 +30,6 @@ import {
   ApolloError,
 } from "apollo-client";
 import { RefetchQueryDescription } from "apollo-client/core/watchQueryOptions";
-import { setImmediate } from "async";
 import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
 import { State as AppState } from "src/reducers";
 
