@@ -1,8 +1,15 @@
 import rehydrated, { State as RehydratedState } from "./rehydrated";
 
-export type State = {
-  rehydrated: RehydratedState;
+type OfflineState = {
+  offline: {
+    online: boolean;
+    outbox: any[];
+  };
 };
+
+export interface State extends OfflineState {
+  rehydrated: RehydratedState;
+}
 
 export default {
   rehydrated,
