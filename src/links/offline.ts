@@ -1,27 +1,66 @@
-import { ApolloLink, Operation, NextLink, Observable } from "apollo-link";
-import { getOperationDefinition } from "apollo-utilities";
-import { Action, Store as ReduxStore } from "redux";
-import { print } from "graphql/language/printer";
+import {
+  execute as _execute,
+  ApolloLink,
+  Operation,
+  NextLink,
+  Observable,
+  GraphQLRequest,
+  ExecutionResult,
+  FetchResult,
+} from "apollo-link";
+import {
+  getOperationDefinition,
+  getMutationDefinition,
+  resultKeyNameFromField,
+  tryFunctionOrLogError,
+} from "apollo-utilities";
+import { NormalizedCacheObject } from "apollo-cache-inmemory";
+import { Store as ReduxStore } from "redux";
+import { FieldNode } from "graphql";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
 import ApolloOfflineClient, { OfflineCallback } from "../client";
-import { rootLogger } from "../utils";
+import { rootLogger, getOperationFieldName } from "../utils";
+import { Discard } from "../store";
+import {
+  FetchPolicy,
+  MutationUpdaterFn,
+  MutationQueryReducersMap,
+  ApolloError,
+} from "apollo-client";
+import { RefetchQueryDescription } from "apollo-client/core/watchQueryOptions";
+import { setImmediate } from "async";
+import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
+import { State as AppState } from "src/reducers";
 
 const logger = rootLogger.extend("offline-link");
 
 export type DetectNetwork = () => boolean;
 
-type Store = ReduxStore<any>;
+type Store = ReduxStore<AppState>;
 
 export interface Options {
   store: Store;
   detectNetwork: DetectNetwork;
 }
 
+const IS_OPTIMISTIC_KEY =
+  typeof Symbol !== "undefined" ? Symbol("isOptimistic") : "@@isOptimistic";
 const OPERATION_TYPE_MUTATION = "mutation";
 const OPERATION_TYPE_QUERY = "query";
 const ERROR_STATUS_CODE = 400;
+
+export const isOptimistic = (obj) =>
+  typeof obj[IS_OPTIMISTIC_KEY] !== undefined
+    ? obj[IS_OPTIMISTIC_KEY]
+    : undefined;
+
+const actions = {
+  ENQUEUE: QUEUE_OPERATION,
+  COMMIT: QUEUE_OPERATION_COMMIT,
+  ROLLBACK: QUEUE_OPERATION_ROLLBACK,
+};
 
 export default class OfflineLink extends ApolloLink {
   private store: Store;
@@ -40,12 +79,6 @@ export default class OfflineLink extends ApolloLink {
     }
 
     return new Observable((observer) => {
-      const finish = (data: any): (() => void) => {
-        observer.next({ data });
-        observer.complete();
-        return () => null;
-      };
-
       const online = this.detectNetwork();
       const { operation: operationType } = getOperationDefinition(
         operation.query,
@@ -56,20 +89,27 @@ export default class OfflineLink extends ApolloLink {
 
       if (!online && isQuery) {
         const data = processOfflineQuery(operation);
-        return finish(data);
+        observer.next({ data });
+        observer.complete();
+        return () => null;
       }
 
       if (isMutation) {
-        const data = processMutation(operation, this.store);
-        if (data) {
-          return finish(data);
+        const {
+          apolloOfflineContext: { execute = false } = {},
+        } = operation.getContext();
+
+        if (!execute) {
+          const data = enqueueMutation(operation, this.store, observer);
+
+          if (!online) {
+            observer.next({ data, [IS_OPTIMISTIC_KEY]: true });
+            observer.complete();
+          }
+
+          return () => null;
         }
       }
-
-      logger("Executing operation on network", {
-        query: print(operation.query),
-        variables: operation.variables,
-      });
 
       const handle = forward(operation).subscribe(observer);
 
@@ -95,101 +135,216 @@ const processOfflineQuery = ({ query, variables, getContext }: Operation) => {
   }
 };
 
-const processMutation = (operation: Operation, store: Store) => {
-  const { offlineContext, ...context } = operation.getContext();
-  const {
-    mutation,
-    variables,
-    optimisticResponse,
-    refetchQueries,
-    execute,
-  } = offlineContext;
+export type EnqueuedMutationEffect<T> = {
+  optimisticResponse: object;
+  operation: GraphQLRequest;
+  update: MutationUpdaterFn<T>;
+  updateQueries: MutationQueryReducersMap<T>;
+  refetchQueries:
+    | ((result: ExecutionResult) => RefetchQueryDescription)
+    | RefetchQueryDescription;
+  observer: ZenObservable.SubscriptionObserver<T>;
+  fetchPolicy?: FetchPolicy;
+};
 
-  if (execute) {
-    return;
+const enqueueMutation = <T>(
+  operation: Operation,
+  store: Store,
+  observer: ZenObservable.SubscriptionObserver<T>,
+) => {
+  const { query: mutation, variables } = operation;
+  const {
+    apolloOfflineContext: {
+      optimistic: originalOptimisticResponse,
+      update,
+      updateQueries,
+      refetchQueries,
+      fetchPolicy,
+    },
+  } = operation.getContext();
+
+  const optimisticResponse =
+    typeof originalOptimisticResponse === "function"
+      ? originalOptimisticResponse(variables)
+      : originalOptimisticResponse;
+
+  setImmediate(() => {
+    const effect: EnqueuedMutationEffect<any> = {
+      operation,
+      optimisticResponse,
+      update,
+      updateQueries,
+      refetchQueries,
+      fetchPolicy,
+      observer,
+    };
+
+    store.dispatch({
+      type: actions.ENQUEUE,
+      payload: {},
+      meta: {
+        offline: {
+          effect,
+          commit: { type: actions.COMMIT, meta: null },
+          rollback: { type: actions.ROLLBACK, meta: null },
+        },
+      },
+    });
+  });
+
+  // If we have an optimistic response, return it.
+  if (optimisticResponse) {
+    return optimisticResponse;
   }
 
-  const data =
-    (optimisticResponse &&
-      (typeof optimisticResponse === "function"
-        ? { ...optimisticResponse(variables) }
-        : optimisticResponse)) ||
-    null;
-
-  const effect = {
-    mutation,
-    variables,
-    refetchQueries,
-    context,
-    execute: true,
-  };
-
-  logger("Enqueing mutation and returning optimistic response", {
-    variables,
-    optimisticResponse,
-    mutation: print(mutation),
-  });
-
-  store.dispatch({
-    type: QUEUE_OPERATION,
-    payload: {},
-    meta: {
-      offline: {
-        effect,
-        commit: { type: QUEUE_OPERATION_COMMIT, meta: null },
-        rollback: { type: QUEUE_OPERATION_ROLLBACK, meta: null },
-      },
+  // Accumulate a `null` object based on the mutation definition.
+  const mutationDefinition = getMutationDefinition(mutation);
+  return mutationDefinition.selectionSet.selections.reduce(
+    (response: any, elem: FieldNode) => {
+      response[resultKeyNameFromField(elem)] = null;
+      return response;
     },
-  });
-
-  return data;
+    {},
+  );
 };
 
-export const offlineEffect = async <T>(
+export const offlineEffect = async <T extends NormalizedCacheObject>(
+  store: Store,
   client: ApolloOfflineClient<T>,
-  // TODO: Typings...
-  {
-    mutation,
-    variables,
-    refetchQueries,
-    execute,
-    context: originalContext,
-  }: any,
-) => {
+  effect: EnqueuedMutationEffect<any>,
+  action: OfflineAction,
+  callback: OfflineCallback,
+): Promise<FetchResult<Record<string, any>, Record<string, any>>> => {
+  const execute = true;
+  const {
+    optimisticResponse,
+    operation: { variables, query: mutation, context },
+    update,
+    // updateQueries,
+    // refetchQueries,
+    fetchPolicy,
+    observer,
+  } = effect;
+
   await client.hydrated();
-  return client.mutate({
-    mutation,
-    variables,
-    refetchQueries,
-    context: {
-      ...originalContext,
-      offlineContext: {
+
+  return new Promise((resolve, reject) => {
+    if (!client.queryManager) {
+      client.initQueryManager();
+    }
+
+    // Access the private API of the query manager...
+    const buildOperationForLink: Function = (client.queryManager as any)
+      .buildOperationForLink;
+    const extraContext = {
+      apolloOfflineContext: {
         execute,
       },
-    },
+      ...context,
+      optimisticResponse,
+    };
+
+    const operation = buildOperationForLink.call(
+      client.queryManager,
+      mutation,
+      variables,
+      extraContext,
+    );
+
+    logger("Executing link", operation);
+
+    _execute(client.link, operation).subscribe({
+      next: (data) => {
+        const dataStore = client.queryManager.dataStore;
+
+        if (fetchPolicy !== "no-cache") {
+          dataStore.markMutationResult({
+            mutationId: null,
+            result: data,
+            document: mutation,
+            variables,
+            updateQueries: {}, // TODO: populate this?
+            update,
+          });
+        }
+
+        client.queryManager.broadcastQueries();
+        resolve({ data });
+
+        if (observer.next && !observer.closed) {
+          observer.next({ ...data, [IS_OPTIMISTIC_KEY]: false });
+          observer.complete();
+        }
+
+        if (typeof callback === "function") {
+          const mutationName = getOperationFieldName(mutation);
+          const {
+            additionalDataContext: { newVars = operation.variables } = {},
+            ...restContext
+          } = data.context || {};
+
+          if (!Object.keys(restContext || {}).length) {
+            delete data.context;
+          } else {
+            data.context = restContext;
+          }
+
+          tryFunctionOrLogError(() => {
+            const errors = data.errors
+              ? {
+                  mutation: mutationName,
+                  variables: newVars,
+                  error: new ApolloError({
+                    graphQLErrors: data.errors,
+                  }),
+                  notified: !!observer.next,
+                }
+              : null;
+            const success =
+              errors === null
+                ? {
+                    mutation: mutationName,
+                    variables: newVars,
+                    ...data,
+                    notified: !!observer.next,
+                  }
+                : null;
+            callback(errors, success);
+          });
+        }
+      },
+      error: (error) => {
+        logger("Error executing link:", error);
+        reject(error);
+      },
+    });
   });
 };
 
-export const discard = (maxRetryCount: number, callback: OfflineCallback) => (
-  error: any,
-  action: Action,
-  retries: number,
-) => {
-  const discardResult = shouldDiscard(error, action, retries, maxRetryCount);
+export const discard = (
+  discardCondition: Discard,
+  callback: OfflineCallback,
+) => (error: any, action: OfflineAction, retries: number) => {
+  const discardResult = shouldDiscard(error, action, retries, discardCondition);
 
   if (discardResult) {
-    callback(error, null);
+    if (typeof callback === "function") {
+      tryFunctionOrLogError(() => {
+        callback({ error }, null);
+      });
+    }
   }
 
   return discardResult;
 };
 
 const shouldDiscard = (
-  { graphQLErrors = [], networkError, permanent }: any,
-  action: Action,
+  error: any,
+  action: OfflineAction,
   retries: number,
-  maxRetryCount: number,
+  discardCondition: Discard,
 ) => {
+  const { graphQLErrors = [], networkError, permanent } = error;
   // If there are GraphQL errors, discard the request
   if (graphQLErrors.length) {
     logger("Discarding action due to GraphQL errors", action, graphQLErrors);
@@ -198,15 +353,10 @@ const shouldDiscard = (
 
   // If the network error status code >= 400, discard the request
   if (networkError.statusCode >= ERROR_STATUS_CODE) {
-    logger(
-      "Discarding action due to >= 400 status code",
-      action,
-      networkError.statusCode,
-    );
-
+    logger("Discarding action due to >= 400 status code", action, networkError);
     return true;
   }
 
-  // If the error is permanent or we've reached max retries, discard the request
-  return permanent || retries > maxRetryCount;
+  // If the error is permanent or the consumer says so, discard the request
+  return permanent || discardCondition(error, action, retries);
 };

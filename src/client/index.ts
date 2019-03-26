@@ -3,20 +3,21 @@ import ApolloClient, {
   MutationOptions,
   ApolloClientOptions,
 } from "apollo-client";
-import { getOperationDefinition, variablesInOperation } from "apollo-utilities";
 import { ApolloLink, Observable, Operation, NextLink } from "apollo-link";
+import { NormalizedCacheObject } from "apollo-cache-inmemory";
 import { NetworkCallback } from "@redux-offline/redux-offline/lib/types";
 import OfflineLink, { offlineEffect, discard } from "../links/offline";
 import passthroughLink from "../links/passthrough";
 import { REHYDRATE_STORE } from "../actions/rehydrateStore";
-import { createOfflineStore } from "../store";
+import { createOfflineStore, Discard } from "../store";
 import networkConnected from "../selectors/networkConnected";
 import { rootLogger } from "../utils";
+import { State as AppState } from "../reducers";
 
 const logger = rootLogger.extend("client");
 
 const createNetworkLink = (
-  store: Store<any>,
+  store: Store<AppState>,
   disableOffline: boolean = false,
   offlineLink?: ApolloLink,
   onlineLink?: ApolloLink,
@@ -37,8 +38,7 @@ const createNetworkLink = (
 export type OfflineCallback = (error: any, success: any) => void;
 
 export interface OfflineConfig {
-  // The number of times to retry a request
-  maxRetryCount?: number;
+  discardCondition: Discard;
   callback?: OfflineCallback;
 }
 
@@ -59,10 +59,17 @@ export interface Options {
   offlineConfig?: OfflineConfig;
 }
 
+const DEFAULT_OFFLINE_CONFIG: OfflineConfig = {
+  // Discard a request after 100 attempts
+  discardCondition: (error, action, retries) => retries > 100,
+};
+
 const RESET_STATE = "Offline/RESET_STATE";
 
-export default class ApolloOfflineClient<T> extends ApolloClient<T> {
-  private _store: Store<any>;
+export default class ApolloOfflineClient<
+  T extends NormalizedCacheObject
+> extends ApolloClient<T> {
+  private _store: Store<AppState>;
 
   // Resolves when `@redux-offline` rehydrates
   private hydratedPromise: Promise<ApolloOfflineClient<T>>;
@@ -81,9 +88,9 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
       onlineLink = null,
       storage = undefined,
       offlineConfig: {
-        maxRetryCount = 10,
-        callback: offlineCallback = () => {},
-      } = {},
+        discardCondition,
+        callback: offlineCallback,
+      } = DEFAULT_OFFLINE_CONFIG,
     }: Options,
     {
       cache: customCache = undefined,
@@ -103,7 +110,7 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
     // ???: Should we fail if offline is disabled and no `onlineLink`?
 
     // TODO: if `disableOffline`, don't create the store
-    const store: Store<any> = disableOffline
+    const store: Store<AppState> = disableOffline
       ? null
       : createOfflineStore({
           middleware: reduxMiddleware,
@@ -111,8 +118,9 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
             store.dispatch({ type: REHYDRATE_STORE });
             resolveClient(this);
           },
-          effect: (effect) => offlineEffect(this, effect),
-          discard: discard(maxRetryCount, offlineCallback),
+          effect: (effect, action) =>
+            offlineEffect(store, this, effect, action, offlineCallback),
+          discard: discard(discardCondition, offlineCallback),
           detectNetwork,
           storage,
         });
@@ -181,43 +189,28 @@ export default class ApolloOfflineClient<T> extends ApolloClient<T> {
     }
 
     const {
-      mutation,
-      variables: mutationVariables,
       optimisticResponse,
       context: originalContext = {},
+      update,
+      fetchPolicy,
+      ...otherOptions
     } = options;
-    const { offlineContext: originalOfflineContext = {} } = originalContext;
-
-    const operationDefinition = getOperationDefinition(mutation);
-    const operationVariables = variablesInOperation(operationDefinition);
-    const variables = [...operationVariables].reduce(
-      (object: any, key: string) => ({
-        ...object,
-        [key]: mutationVariables[key],
-      }),
-      {},
-    );
-
-    const { execute: executeMutation } = originalOfflineContext;
-    const { refetchQueries, ...otherOptions } = options;
 
     const context = {
       ...originalContext,
-      offlineContext: {
-        ...originalOfflineContext,
-        mutation,
-        variables,
+      apolloOfflineContext: {
+        update,
+        fetchPolicy,
         optimisticResponse,
-        refetchQueries,
       },
     };
 
-    const newOptions = {
-      ...otherOptions,
-      refetchQueries: executeMutation ? refetchQueries : undefined,
+    return super.mutate({
+      optimisticResponse,
       context,
-    };
-
-    return super.mutate(newOptions);
+      update,
+      fetchPolicy,
+      ...otherOptions,
+    });
   }
 }
