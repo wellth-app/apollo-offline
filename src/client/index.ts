@@ -1,3 +1,4 @@
+import "setimmediate";
 import { Store, Middleware } from "redux";
 import ApolloClient, {
   MutationOptions,
