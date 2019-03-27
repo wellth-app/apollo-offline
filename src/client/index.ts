@@ -13,7 +13,6 @@ import {
   FetchResult,
 } from "apollo-link";
 import { NormalizedCacheObject, InMemoryCache } from "apollo-cache-inmemory";
-import { NetworkCallback } from "@redux-offline/redux-offline/lib/types";
 import OfflineLink, { offlineEffect, discard } from "../links/offline";
 import passthroughLink from "../links/passthrough";
 import { REHYDRATE_STORE } from "../actions/rehydrateStore";
@@ -54,8 +53,6 @@ export interface ApolloOfflineClientOptions {
   offlineLink?: ApolloLink;
   /// Link executed after the offline cache.
   onlineLink?: ApolloLink;
-  /// Callback utilized for detecting network connectivity.
-  detectNetwork?: (callback: NetworkCallback) => void;
   /// Storage client for persistence (default undefined)
   storage?: any;
   /// Configuration for offline behavior.
