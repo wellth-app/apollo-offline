@@ -41,7 +41,6 @@ type Store = ReduxStore<AppState>;
 
 export interface Options {
   store: Store;
-  detectNetwork: DetectNetwork;
 }
 
 const IS_OPTIMISTIC_KEY =
@@ -63,12 +62,10 @@ const actions = {
 
 export default class OfflineLink extends ApolloLink {
   private store: Store;
-  private detectNetwork: DetectNetwork;
 
-  constructor({ store, detectNetwork }: Options) {
+  constructor(store: Store) {
     super();
     this.store = store;
-    this.detectNetwork = detectNetwork;
   }
 
   request(operation: Operation, forward: NextLink) {
@@ -78,7 +75,11 @@ export default class OfflineLink extends ApolloLink {
     }
 
     return new Observable((observer) => {
-      const online = this.detectNetwork();
+      // Get the network connection state from the store
+      const {
+        offline: { online },
+      } = this.store.getState();
+
       const { operation: operationType } = getOperationDefinition(
         operation.query,
       );
@@ -110,7 +111,11 @@ export default class OfflineLink extends ApolloLink {
         }
       }
 
-      const handle = forward(operation).subscribe(observer);
+      const handle = forward(operation).subscribe({
+        next: observer.next.bind(observer),
+        error: observer.error.bind(observer),
+        complete: observer.complete.bind(observer),
+      });
 
       return () => {
         if (handle) handle.unsubscribe();
@@ -154,7 +159,7 @@ const enqueueMutation = <T>(
   const { query: mutation, variables } = operation;
   const {
     apolloOfflineContext: {
-      optimistic: originalOptimisticResponse,
+      optimisticResponse: originalOptimisticResponse,
       update,
       updateQueries,
       refetchQueries,
@@ -180,7 +185,7 @@ const enqueueMutation = <T>(
 
     store.dispatch({
       type: actions.ENQUEUE,
-      payload: {},
+      payload: { optimisticResponse },
       meta: {
         offline: {
           effect,
@@ -251,7 +256,6 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
     );
 
     logger("Executing link", operation);
-
     _execute(client.link, operation).subscribe({
       next: (data) => {
         const dataStore = client.queryManager.dataStore;
@@ -266,6 +270,8 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
             update,
           });
         }
+
+        // TODO: Update existing operations in the cache with the new IDs from the recieved request
 
         client.queryManager.broadcastQueries();
         resolve({ data });

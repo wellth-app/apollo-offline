@@ -8,10 +8,7 @@ import {
 } from "redux";
 import { offline } from "@redux-offline/redux-offline";
 import offlineConfig from "@redux-offline/redux-offline/lib/defaults";
-import {
-  OfflineAction,
-  NetworkCallback,
-} from "@redux-offline/redux-offline/lib/types";
+import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
 import thunk from "redux-thunk";
 import reducers from "../reducers";
 import { rootLogger } from "../utils";
@@ -34,7 +31,6 @@ export interface Options {
   persistCallback: () => void;
   effect: NetworkEffect;
   discard: Discard;
-  detectNetwork: (callback: NetworkCallback) => void;
   /// TODO: Figure out wtf AsyncStorage conforms to and do that
   storage?: any;
 }
@@ -44,7 +40,6 @@ export const createOfflineStore = ({
   persistCallback,
   effect,
   discard,
-  detectNetwork = offlineConfig.detectNetwork,
   storage = undefined,
 }: Options): Store<any> => {
   logger("Creating offline store");
@@ -67,7 +62,6 @@ export const createOfflineStore = ({
         },
         effect,
         discard,
-        detectNetwork,
       }),
     ),
   );

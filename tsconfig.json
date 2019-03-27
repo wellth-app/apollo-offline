@@ -28,6 +28,10 @@
     "lib",
     "src/**/__tests__/*.ts",
     "src/**/__mocks__/*.ts",
+    "./src/**/*.test.tsx",
+    "./src/**/*.test.ts",
+    "./src/**/*.spec.tsx",
+    "./src/**/*.spec.ts",
     "node_modules",
   ],
   "compileOnSave": true

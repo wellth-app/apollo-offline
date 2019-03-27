@@ -3,17 +3,24 @@ import { Store, Middleware } from "redux";
 import ApolloClient, {
   MutationOptions,
   ApolloClientOptions,
+  OperationVariables,
 } from "apollo-client";
-import { ApolloLink, Observable, Operation, NextLink } from "apollo-link";
-import { NormalizedCacheObject } from "apollo-cache-inmemory";
+import {
+  ApolloLink,
+  Observable,
+  Operation,
+  NextLink,
+  FetchResult,
+} from "apollo-link";
+import { NormalizedCacheObject, InMemoryCache } from "apollo-cache-inmemory";
 import { NetworkCallback } from "@redux-offline/redux-offline/lib/types";
 import OfflineLink, { offlineEffect, discard } from "../links/offline";
 import passthroughLink from "../links/passthrough";
 import { REHYDRATE_STORE } from "../actions/rehydrateStore";
 import { createOfflineStore, Discard } from "../store";
-import networkConnected from "../selectors/networkConnected";
 import { rootLogger } from "../utils";
 import { State as AppState } from "../reducers";
+import { ApolloCache } from "apollo-cache";
 
 const logger = rootLogger.extend("client");
 
@@ -26,12 +33,7 @@ const createNetworkLink = (
   ApolloLink.from(
     [
       offlineLink,
-      disableOffline
-        ? null
-        : new OfflineLink({
-            store,
-            detectNetwork: () => networkConnected(store.getState()),
-          }),
+      disableOffline ? null : new OfflineLink(store),
       onlineLink,
     ].filter(Boolean),
   );
@@ -43,7 +45,7 @@ export interface OfflineConfig {
   callback?: OfflineCallback;
 }
 
-export interface Options {
+export interface ApolloOfflineClientOptions {
   /// If true, disables offline behavior, and only executes `onlineLink`
   disableOffline?: boolean;
   /// Middleware for the redux-offline store.
@@ -83,7 +85,6 @@ export default class ApolloOfflineClient<
   constructor(
     {
       disableOffline = false,
-      detectNetwork,
       reduxMiddleware = [],
       offlineLink = null,
       onlineLink = null,
@@ -92,7 +93,7 @@ export default class ApolloOfflineClient<
         discardCondition,
         callback: offlineCallback,
       } = DEFAULT_OFFLINE_CONFIG,
-    }: Options,
+    }: ApolloOfflineClientOptions,
     {
       cache: customCache = undefined,
       link: customLink = undefined,
@@ -103,14 +104,9 @@ export default class ApolloOfflineClient<
       client: ApolloOfflineClient<T> | PromiseLike<ApolloOfflineClient<T>>,
     ) => void;
 
-    // If no `onlineLink` is provided, the operation will not be forwarded
-    // to the network becuase this library does not provide a "terminating"
-    // link for the online scenario...
-
     // ???: Should we fail if no `onlineLink` is provided?
     // ???: Should we fail if offline is disabled and no `onlineLink`?
 
-    // TODO: if `disableOffline`, don't create the store
     const store: Store<AppState> = disableOffline
       ? null
       : createOfflineStore({
@@ -122,7 +118,6 @@ export default class ApolloOfflineClient<
           effect: (effect, action) =>
             offlineEffect(store, this, effect, action, offlineCallback),
           discard: discard(discardCondition, offlineCallback),
-          detectNetwork,
           storage,
         });
 
@@ -131,7 +126,7 @@ export default class ApolloOfflineClient<
     //       otherwise create a new offline cache.
     // !!!: The default behavior, right now, is to use the provided cache
     // const cache = disableOffline ? (customCache || new InMemoryCache()) : new OfflineCache()
-    const cache = customCache;
+    const cache: ApolloCache<any> = customCache || new InMemoryCache();
 
     // !!!: Create the link with a `RehydrateLink` as the first link
     // to ensure requests are queued until rehydration. This will be the first link
@@ -184,11 +179,14 @@ export default class ApolloOfflineClient<
     await this.resetStore();
   }
 
-  mutate(options: MutationOptions) {
-    if (this._disableOffline) {
+  mutate<T, TVariables = OperationVariables>(
+    options: MutationOptions<T, TVariables>,
+  ): Promise<FetchResult<T>> {
+    if (!this.isOfflineEnabled()) {
       return super.mutate(options);
     }
 
+    const execute = false;
     const {
       optimisticResponse,
       context: originalContext = {},
@@ -200,6 +198,7 @@ export default class ApolloOfflineClient<
     const context = {
       ...originalContext,
       apolloOfflineContext: {
+        execute,
         update,
         fetchPolicy,
         optimisticResponse,
@@ -215,3 +214,5 @@ export default class ApolloOfflineClient<
     });
   }
 }
+
+export { ApolloOfflineClient };
