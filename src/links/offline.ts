@@ -60,6 +60,12 @@ const actions = {
   ROLLBACK: QUEUE_OPERATION_ROLLBACK,
 };
 
+// !!!: This is to remove the context that is added by the queryManager before a request.
+// !!!: Because the request is processed by the queryManager before it gets to the `OfflineLink`,
+//      context needs to be trimmed to protect against runaway storage but preserve functionality
+//      for links dependent upon context between `OfflineLink` and network execution.
+const APOLLO_PRIVATE_CONTEXT_KEYS = ["cache", "getCacheKey", "clientAwareness"];
+
 export default class OfflineLink extends ApolloLink {
   private store: Store;
 
@@ -165,6 +171,7 @@ const enqueueMutation = <T>(
       refetchQueries,
       fetchPolicy,
     },
+    ...operationContext
   } = operation.getContext();
 
   const optimisticResponse =
@@ -174,7 +181,18 @@ const enqueueMutation = <T>(
 
   setImmediate(() => {
     const effect: EnqueuedMutationEffect<any> = {
-      operation,
+      operation: {
+        ...operation,
+        // Ensure things like `cache`, `getCacheKey`, and `clientAwareness` (keys added by apollo-client)
+        // are not included in the persisted context.
+        context: Object.keys(operationContext)
+          .filter((key) => APOLLO_PRIVATE_CONTEXT_KEYS.indexOf(key) < 0)
+          .reduce(
+            (newObj, key) =>
+              Object.assign(newObj, { [key]: operationContext[key] }),
+            {},
+          ),
+      },
       optimisticResponse,
       update,
       updateQueries,
@@ -237,7 +255,6 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       client.initQueryManager();
     }
 
-    // Access the private API of the query manager...
     // !!!: Probably not super legit but AWS does it so we must be ok
     const buildOperationForLink: Function = (client.queryManager as any)
       .buildOperationForLink;
@@ -249,6 +266,7 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       optimisticResponse,
     };
 
+    // Reconstruct the context of the operation
     const operation = buildOperationForLink.call(
       client.queryManager,
       mutation,

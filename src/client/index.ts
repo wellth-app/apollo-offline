@@ -192,6 +192,7 @@ export default class ApolloOfflineClient<
       ...otherOptions
     } = options;
 
+    // Configure context for apollo-offline based on provided options
     const context = {
       ...originalContext,
       apolloOfflineContext: {

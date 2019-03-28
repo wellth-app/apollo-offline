@@ -1,6 +1,7 @@
 import { v4 as uuid } from "uuid";
-import { Observable } from "apollo-link";
+import { Observable, ApolloLink } from "apollo-link";
 import { createHttpLink } from "apollo-link-http";
+import { setContext } from "apollo-link-context";
 import gql from "graphql-tag";
 import { ApolloOfflineClient, ApolloOfflineClientOptions } from "./";
 import { isOptimistic } from "../links/offline";
@@ -14,7 +15,7 @@ jest.mock(
   "@redux-offline/redux-offline/lib/defaults/detectNetwork",
   () => (callback) => {
     setNetworkOnlineStatus = (online) => {
-      setTimeout(() => callback({ online }), 0);
+      callback({ online });
     };
 
     // Setting initial network online status
@@ -161,7 +162,7 @@ describe("ApolloOfflineClient", () => {
       client = getClient({ disableOffline });
     });
 
-    it("updates the cache with the server response", async () => {
+    it("updates the cache with the server response", async (done) => {
       const result = await client.mutate({
         mutation,
         variables,
@@ -174,6 +175,8 @@ describe("ApolloOfflineClient", () => {
       expect(client.cache.extract(false)).toMatchObject({
         [`Todo:${serverId}`]: serverResponse.addTodo,
       });
+
+      done();
     });
   });
 
@@ -185,7 +188,9 @@ describe("ApolloOfflineClient", () => {
       client = getClient({ disableOffline });
     });
 
-    it("updates the cache with the server response", async () => {
+    it("updates the cache with the server response", async (done) => {
+      setNetworkOnlineStatus(true);
+
       const result = await client.mutate({
         mutation,
         variables,
@@ -203,6 +208,78 @@ describe("ApolloOfflineClient", () => {
       });
 
       expect(isOptimistic(result)).toBe(false);
+
+      done();
+    });
+
+    describe("enqueued effects", () => {
+      describe("context", () => {
+        it("preserves an operation's custom context applied via link", async (done) => {
+          setNetworkOnlineStatus(true);
+
+          const context = {
+            customContext: {
+              key: "Value",
+            },
+            otherCustomContext: "customContextValue",
+          };
+
+          let operationContext = null;
+
+          client = getClient({
+            disableOffline,
+            // Configure a link that's executed before the `OfflineLink` that
+            // extends context
+            offlineLink: setContext(() => context),
+            onlineLink: new ApolloLink((operation, forward) => {
+              operationContext = operation.getContext();
+              return forward(operation);
+            }).concat(createHttpLink({ uri: "some uri" })),
+          });
+
+          await client.mutate({
+            mutation,
+            variables,
+            optimisticResponse,
+          });
+
+          expect(operationContext).toMatchObject({ ...context });
+          done();
+        });
+
+        it("preserves an operation's custom context applied via mutate options", async (done) => {
+          setNetworkOnlineStatus(true);
+
+          const context = {
+            customContextKey: {
+              deepNestedObject: {
+                key: "value",
+              },
+            },
+            string: "value",
+          };
+
+          let operationContext = null;
+
+          client = getClient({
+            disableOffline,
+            onlineLink: new ApolloLink((operation, forward) => {
+              operationContext = operation.getContext();
+              return forward(operation);
+            }).concat(createHttpLink({ uri: "some uri" })),
+          });
+
+          await client.mutate({
+            mutation,
+            variables,
+            optimisticResponse,
+            context,
+          });
+
+          expect(operationContext).toMatchObject({ ...context });
+          done();
+        });
+      });
     });
 
     describe("Online", () => {
@@ -210,7 +287,7 @@ describe("ApolloOfflineClient", () => {
         setNetworkOnlineStatus(true);
       });
 
-      it("updates the cache with the optimistic response", async () => {
+      it("updates the cache with the optimistic response", () => {
         client.mutate({
           mutation,
           variables,
@@ -235,11 +312,9 @@ describe("ApolloOfflineClient", () => {
     });
 
     describe("Offline", () => {
-      beforeEach(() => {
+      it("updates the cache with the optimistic response", () => {
         setNetworkOnlineStatus(false);
-      });
 
-      it("updates the cache with the optimistic response", async () => {
         client.mutate({
           mutation,
           variables,
