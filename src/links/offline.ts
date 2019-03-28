@@ -358,7 +358,7 @@ const shouldDiscard = (
   }
 
   // If the network error status code >= 400, discard the request
-  if (networkError.statusCode >= ERROR_STATUS_CODE) {
+  if (networkError && networkError.statusCode >= ERROR_STATUS_CODE) {
     logger("Discarding action due to >= 400 status code", action, networkError);
     return true;
   }
