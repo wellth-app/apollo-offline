@@ -238,6 +238,7 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
     }
 
     // Access the private API of the query manager...
+    // !!!: Probably not super legit but AWS does it so we must be ok
     const buildOperationForLink: Function = (client.queryManager as any)
       .buildOperationForLink;
     const extraContext = {
