@@ -256,7 +256,7 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       extraContext,
     );
 
-    logger("Executing link", operation);
+    logger("Executing link", { ...operation, context: operation.getContext() });
     _execute(client.link, operation).subscribe({
       next: (data) => {
         const dataStore = client.queryManager.dataStore;
