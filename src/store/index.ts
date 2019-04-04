@@ -7,10 +7,10 @@ import {
   Store,
 } from "redux";
 import { offline } from "@redux-offline/redux-offline";
-import offlineConfig from "@redux-offline/redux-offline/lib/defaults";
-import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
+import defaultOfflineConfig from "@redux-offline/redux-offline/lib/defaults";
+import { OfflineAction, Config } from "@redux-offline/redux-offline/lib/types";
 import thunk from "redux-thunk";
-import reducers from "../reducers";
+import reducers, { State } from "../reducers";
 import { rootLogger } from "../utils";
 
 const logger = rootLogger.extend("store");
@@ -26,11 +26,9 @@ export type Discard = (
   retries: number,
 ) => boolean;
 
-export interface Options {
+export interface Options extends Partial<Config> {
+  // Middleware to be applied to the redux store.
   middleware: Middleware[];
-  persistCallback: () => void;
-  effect: NetworkEffect;
-  discard: Discard;
   /// TODO: Figure out wtf AsyncStorage conforms to and do that
   storage?: any;
 }
@@ -38,10 +36,9 @@ export interface Options {
 export const createOfflineStore = ({
   middleware,
   persistCallback,
-  effect,
-  discard,
   storage = undefined,
-}: Options): Store<any> => {
+  ...offlineConfig
+}: Options): Store<State> => {
   logger("Creating offline store");
   return createStore(
     combineReducers(reducers),
@@ -51,6 +48,7 @@ export const createOfflineStore = ({
     compose(
       applyMiddleware(thunk, ...middleware),
       offline({
+        ...defaultOfflineConfig,
         ...offlineConfig,
         persistCallback: () => {
           logger("Persistence loaded");
@@ -58,10 +56,9 @@ export const createOfflineStore = ({
         },
         persistOptions: {
           blacklist: ["rehydrated"],
+          whitelist: ["offline"],
           storage,
         },
-        effect,
-        discard,
       }),
     ),
   );

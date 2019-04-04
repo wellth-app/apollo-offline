@@ -1,14 +1,9 @@
 import rehydrated, { State as RehydratedState } from "./rehydrated";
+import { OfflineState } from "@redux-offline/redux-offline/lib/types";
 
-type OfflineState = {
-  offline: {
-    online: boolean;
-    outbox: any[];
-  };
-};
-
-export interface State extends OfflineState {
+export interface State {
   rehydrated: RehydratedState;
+  offline: OfflineState;
 }
 
 export default {
