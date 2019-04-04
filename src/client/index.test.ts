@@ -5,6 +5,8 @@ import { setContext } from "apollo-link-context";
 import gql from "graphql-tag";
 import { ApolloOfflineClient, ApolloOfflineClientOptions } from "./";
 import { isOptimistic } from "../links/offline";
+import { GraphQLError } from "graphql";
+import { ApolloError } from "apollo-client";
 
 jest.mock("apollo-link-http", () => ({
   createHttpLink: jest.fn(),
@@ -49,6 +51,13 @@ const mockHttpResponse = (responses: any[] | any, delay = 0) => {
     request: requestMock,
   }));
 };
+
+const createGraphQLError = (backendError: GraphQLError): ApolloError =>
+  new ApolloError({
+    graphQLErrors: [{ ...backendError }],
+    networkError: null,
+    errorMessage: `GraphQL error: ${backendError.message}`,
+  });
 
 const getClient = (options?: Partial<ApolloOfflineClientOptions>) => {
   const defaultOptions: ApolloOfflineClientOptions = {
@@ -301,12 +310,71 @@ describe("ApolloOfflineClient", () => {
       });
 
       describe("error handling", () => {
-        it("properly updates the cache", () => {
-          // TODO: Mock an error HTTP request
-          // TODO: Ensure the optimistic response is added to the cache before the request is executed
-          // TODO: Execute the request
-          // TODO: Ensure the error was thrown
-          // TODO: Ensure the optimistic response has been removed from the cache
+        it("properly updates the cache", async () => {
+          const errorMock = {
+            type: "GraphQLError",
+            message: "Some specific error message.",
+            code: 1001,
+          };
+
+          const graphQLError = createGraphQLError(errorMock);
+
+          mockHttpResponse({
+            data: optimisticResponse,
+            errors: [errorMock],
+          });
+
+          const offlineCallback = jest.fn();
+          const client = getClient({
+            disableOffline,
+            offlineConfig: {
+              callback: offlineCallback,
+              discardCondition: () => false,
+            },
+          });
+
+          const resultPromise = client.mutate({
+            mutation,
+            variables,
+            optimisticResponse,
+          });
+
+          // Ensure the optimistic response is added to the cache before the request is executed
+          expect(client.cache.extract(true)).toMatchObject({
+            [`Todo:${localId}`]: optimisticResponse.addTodo,
+          });
+
+          // Execute the request
+          try {
+            await resultPromise;
+            fail("Error wasn't thrown!");
+          } catch (error) {
+            expect(error).toMatchObject(graphQLError);
+          }
+
+          // Ensure that the callback provided to the client is notified of the request
+          // being discarded for error reasons
+          expect(offlineCallback).toHaveBeenCalledTimes(1);
+          expect(offlineCallback).toBeCalledWith(
+            {
+              mutation: "addTodo",
+              variables,
+              error: new ApolloError({ graphQLErrors: [errorMock] }),
+              notified: true,
+            },
+            null,
+          );
+
+          // Ensure the optimistic response has been removed from the cache
+          const cacheState = client.cache.extract(true);
+          expect(cacheState).toEqual({});
+          expect({}).not.toMatchObject({
+            [`Todo:${localId}`]: optimisticResponse.addTodo,
+          });
+          // ???: This test fails if the cache is empty...
+          // expect(cacheState).not.toMatchObject({
+          //   [`Todo:${localId}`]: optimisticResponse.addTodo,
+          // });
         });
       });
     });
