@@ -59,11 +59,6 @@ export interface ApolloOfflineClientOptions {
   offlineConfig?: OfflineConfig;
 }
 
-const DEFAULT_OFFLINE_CONFIG: OfflineConfig = {
-  // Discard a request after 100 attempts
-  discardCondition: (error, action, retries) => retries > 100,
-};
-
 const RESET_STATE = "Offline/RESET_STATE";
 
 export default class ApolloOfflineClient<
@@ -86,10 +81,7 @@ export default class ApolloOfflineClient<
       offlineLink = null,
       onlineLink = null,
       storage = undefined,
-      offlineConfig: {
-        discardCondition,
-        callback: offlineCallback,
-      } = DEFAULT_OFFLINE_CONFIG,
+      offlineConfig: { discardCondition, callback: offlineCallback },
     }: ApolloOfflineClientOptions,
     {
       cache: customCache = undefined,
