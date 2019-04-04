@@ -12,14 +12,16 @@ import {
   NextLink,
   FetchResult,
 } from "apollo-link";
+import { ApolloCache } from "apollo-cache";
 import { NormalizedCacheObject, InMemoryCache } from "apollo-cache-inmemory";
+import { NetworkCallback } from "@redux-offline/redux-offline/lib/types";
 import OfflineLink, { offlineEffect, discard } from "../links/offline";
 import passthroughLink from "../links/passthrough";
+import resetState from "../actions/resetState";
 import { REHYDRATE_STORE } from "../actions/rehydrateStore";
 import { createOfflineStore, Discard } from "../store";
 import { rootLogger } from "../utils";
 import { State as AppState } from "../reducers";
-import { ApolloCache } from "apollo-cache";
 
 const logger = rootLogger.extend("client");
 
@@ -40,8 +42,14 @@ const createNetworkLink = (
 export type OfflineCallback = (error: any, success: any) => void;
 
 export interface OfflineConfig {
+  // Condition to evaulate whether an error request should be discarded (default undefined).
   discardCondition: Discard;
+  // Callback for successful/failed network requests (default undefined).
   callback?: OfflineCallback;
+  // Storage client for persistence (default undefined).
+  storage?: any;
+  // Manual override for network detection (default undefined).
+  detectNetwork?: (callback: NetworkCallback) => void;
 }
 
 export interface ApolloOfflineClientOptions {
@@ -53,13 +61,9 @@ export interface ApolloOfflineClientOptions {
   offlineLink?: ApolloLink;
   /// Link executed after the offline cache.
   onlineLink?: ApolloLink;
-  /// Storage client for persistence (default undefined)
-  storage?: any;
   /// Configuration for offline behavior.
   offlineConfig?: OfflineConfig;
 }
-
-const RESET_STATE = "Offline/RESET_STATE";
 
 export default class ApolloOfflineClient<
   T extends NormalizedCacheObject
@@ -80,8 +84,12 @@ export default class ApolloOfflineClient<
       reduxMiddleware = [],
       offlineLink = null,
       onlineLink = null,
-      storage = undefined,
-      offlineConfig: { discardCondition, callback: offlineCallback },
+      offlineConfig: {
+        discardCondition,
+        callback: offlineCallback = undefined,
+        storage = undefined,
+        detectNetwork = undefined,
+      },
     }: ApolloOfflineClientOptions,
     {
       cache: customCache = undefined,
@@ -96,7 +104,7 @@ export default class ApolloOfflineClient<
     // ???: Should we fail if no `onlineLink` is provided?
     // ???: Should we fail if offline is disabled and no `onlineLink`?
 
-    const store: Store<AppState> = disableOffline
+    const store = disableOffline
       ? null
       : createOfflineStore({
           middleware: reduxMiddleware,
@@ -108,6 +116,7 @@ export default class ApolloOfflineClient<
             offlineEffect(store, this, effect, action, offlineCallback),
           discard: discard(discardCondition, offlineCallback),
           storage,
+          detectNetwork,
         });
 
     // !!!: The "offline cache" mentioned in the comment below doesn't exist
@@ -163,7 +172,7 @@ export default class ApolloOfflineClient<
 
   async reset() {
     logger("Resetting client store and cache");
-    this._store.dispatch({ type: RESET_STATE });
+    this._store.dispatch(resetState);
     await this.cache.reset();
     await this.resetStore();
   }
