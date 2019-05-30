@@ -26,19 +26,19 @@ import { PERSIST_REHYDRATE } from "@redux-offline/redux-offline/lib/constants";
 import { NormalizedCacheObject } from "apollo-cache-inmemory";
 import { Store as ReduxStore } from "redux";
 import { FieldNode } from "graphql";
-import { QUEUE_OPERATION } from "actions/queueOperation";
-import { QUEUE_OPERATION_COMMIT } from "actions/queueOperationCommit";
-import { QUEUE_OPERATION_ROLLBACK } from "actions/queueOperationRollback";
-import saveServerId, { SAVE_SERVER_ID } from "actions/saveServerId";
-import ApolloOfflineClient, { OfflineCallback } from "client";
-import { OfflineCache, OfflineSyncMetadataState, METADATA_KEY } from "cache";
+import { QUEUE_OPERATION } from "../actions/queueOperation";
+import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
+import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
+import saveServerId, { SAVE_SERVER_ID } from "../actions/saveServerId";
+import ApolloOfflineClient, { OfflineCallback } from "../client";
+import { OfflineCache, OfflineSyncMetadataState, METADATA_KEY } from "../cache";
 import {
   rootLogger,
   getOperationFieldName,
   replaceUsingMap,
   getIds,
-} from "utils";
-import { Discard } from "store";
+} from "../utils";
+import { Discard } from "../store";
 
 const logger = rootLogger.extend("offline-link");
 

@@ -19,16 +19,15 @@ import {
   ApolloReducerConfig,
   defaultDataIdFromObject,
 } from "apollo-cache-inmemory";
-// import { NetworkCallback } from "@redux-offline/redux-offline/lib/types";
-import OfflineLink, { offlineEffect, discard } from "links/offline";
-import passthroughLink from "links/passthrough";
-import resetState from "actions/resetState";
-import { createOfflineStore, Discard } from "store";
-import { rootLogger } from "utils";
+import OfflineLink, { offlineEffect, discard } from "../links/offline";
+import passthroughLink from "../links/passthrough";
+import resetState from "../actions/resetState";
+import { createOfflineStore, Discard } from "../store";
+import { rootLogger } from "../utils";
 import {
   default as OfflineCache,
   OfflineCache as OfflineCacheType,
-} from "cache";
+} from "../cache";
 
 const logger = rootLogger.extend("client");
 

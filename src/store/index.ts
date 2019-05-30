@@ -10,8 +10,8 @@ import { offline } from "@redux-offline/redux-offline";
 import defaultOfflineConfig from "@redux-offline/redux-offline/lib/defaults";
 import { OfflineAction, Config } from "@redux-offline/redux-offline/lib/types";
 import thunk from "redux-thunk";
-import reducers from "reducers";
-import { rootLogger } from "utils";
+import reducers from "../reducers";
+import { rootLogger } from "../utils";
 
 const logger = rootLogger.extend("store");
 

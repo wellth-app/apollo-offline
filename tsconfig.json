@@ -18,16 +18,7 @@
       "es6",
       "esnext.asynciterable", 
       "es2017.object"
-    ],
-    "paths": {
-      "actions/*": ["actions/*"],
-      "cache/*": ["cache/*"],
-      "client/*": ["client/*"],
-      "links/*": ["links/*"],
-      "reducers/*": ["reducers/*"],
-      "store/*": ["store/*"],
-      "utils/*": ["utils/*"],
-    }
+    ]
   },
   "include": [
     "src/**/*.ts"

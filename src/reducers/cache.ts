@@ -1,4 +1,4 @@
-import { WRITE_CACHE as WRITE_CACHE_ACTION } from "actions/writeCache";
+import { WRITE_CACHE as WRITE_CACHE_ACTION } from "../actions/writeCache";
 
 export default (state = {}, action) => {
   const { type, payload: normalizedCache } = action;

@@ -2,8 +2,8 @@ import { Reducer, ReducersMapObject, AnyAction } from "redux";
 import { IdGetter } from "apollo-cache-inmemory";
 import rehydrated from "./rehydrated";
 import cache from "./cache";
-import { offlineEffectConfig as mutationsConfig } from "links/offline";
-import { NORMALIZED_CACHE_KEY, METADATA_KEY } from "cache";
+import { offlineEffectConfig as mutationsConfig } from "../links/offline";
+import { NORMALIZED_CACHE_KEY, METADATA_KEY } from "../cache";
 
 export declare type OfflineEffectConfig = {
   enqueueAction: string;

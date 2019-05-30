@@ -8,10 +8,10 @@ import {
 } from "apollo-cache-inmemory";
 import { OfflineState } from "@redux-offline/redux-offline/lib/types";
 // import { ThunkAction } from "redux-thunk";
-import { rootLogger } from "utils";
+import { rootLogger } from "../utils";
 import writeCacheAction, {
   WRITE_CACHE as WRITE_CACHE_ACTION,
-} from "actions/writeCache";
+} from "../actions/writeCache";
 
 const logger = rootLogger.extend("offline-cache");
 
