@@ -47,6 +47,8 @@ export type OfflineCacheOptions = {
 const isOfflineCacheOptions = (obj: any): obj is OfflineCacheOptions =>
   !!(obj as OfflineCacheOptions).store;
 
+/// Class that extends the `apollo-inmemory-cache` to persist to the provided
+/// `redux` store in the shape of `OfflineCache`.
 export default class ApolloOfflineCache extends InMemoryCache {
   private store: Store<OfflineCache>;
   private storeCacheRootMutation: boolean = false;
@@ -128,7 +130,6 @@ const boundWriteCache = (
   data: NormalizedCacheObject,
 ) => {
   logger(`Dispatching ${WRITE_CACHE_ACTION}`);
-  // store.dispatch(writeCacheAction(data));
   store.dispatch((writeThunk(WRITE_CACHE_ACTION, data) as any) as Action);
 };
 

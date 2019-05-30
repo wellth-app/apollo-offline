@@ -24,17 +24,6 @@ const offlineEffectsConfigs = [mutationsConfig]
     return config;
   }, {}) as OfflineEffectConfigMap;
 
-const metadataReducer: (dataIdFromObject: IdGetter) => ReducersMapObject = <S>(
-  dataIdFromObject,
-) => ({
-  [METADATA_KEY]: (state: S, action: AnyAction) =>
-    Object.entries(offlineEffectsConfigs).reduce(
-      (effectState, [, { reducer = () => (x) => x }]) =>
-        reducer(dataIdFromObject)(effectState, action),
-      state,
-    ),
-});
-
 export interface Options {
   dataIdFromObject: IdGetter;
 }
@@ -42,5 +31,10 @@ export interface Options {
 export default ({ dataIdFromObject }: Options) => ({
   rehydrated,
   [NORMALIZED_CACHE_KEY]: cache,
-  ...metadataReducer(dataIdFromObject),
+  [METADATA_KEY]: (state, action: AnyAction) =>
+    Object.entries(offlineEffectsConfigs).reduce(
+      (effectState, [, { reducer = () => (x) => x }]) =>
+        reducer(dataIdFromObject)(effectState, action),
+      state,
+    ),
 });
