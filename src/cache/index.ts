@@ -1,5 +1,5 @@
 import { Cache } from "apollo-cache";
-import { Store } from "redux";
+import { Store, AnyAction, Action } from "redux";
 import {
   InMemoryCache,
   ApolloReducerConfig,
@@ -7,11 +7,9 @@ import {
   NormalizedCacheObject,
 } from "apollo-cache-inmemory";
 import { OfflineState } from "@redux-offline/redux-offline/lib/types";
-// import { ThunkAction } from "redux-thunk";
+import { ThunkAction } from "redux-thunk";
 import { rootLogger } from "../utils";
-import writeCacheAction, {
-  WRITE_CACHE as WRITE_CACHE_ACTION,
-} from "../actions/writeCache";
+import { WRITE_CACHE as WRITE_CACHE_ACTION } from "../actions/writeCache";
 
 const logger = rootLogger.extend("offline-cache");
 
@@ -92,7 +90,6 @@ export default class ApolloOfflineCache extends InMemoryCache {
   }
 
   write(write: Cache.WriteOptions) {
-    logger("Writing to cache");
     super.write(write);
 
     /// Delete the `ROOT_MUTATION` key from data if it was written
@@ -114,7 +111,6 @@ export default class ApolloOfflineCache extends InMemoryCache {
   reset() {
     logger("Resetting cache");
     boundWriteCache(this.store, {});
-
     return super.reset();
   }
 
@@ -132,17 +128,17 @@ const boundWriteCache = (
   data: NormalizedCacheObject,
 ) => {
   logger(`Dispatching ${WRITE_CACHE_ACTION}`);
-  store.dispatch(writeCacheAction(data));
-  // store.dispatch((writeThunk(WRITE_CACHE_ACTION, data) as any) as Action);
+  // store.dispatch(writeCacheAction(data));
+  store.dispatch((writeThunk(WRITE_CACHE_ACTION, data) as any) as Action);
 };
 
-// type WriteThunk = (
-//   type: string,
-//   payload: any,
-// ) => ThunkAction<Action, OfflineCache, null, AnyAction>;
+type WriteThunk = (
+  type: string,
+  payload: any,
+) => ThunkAction<Action, OfflineCache, null, AnyAction>;
 
-// const writeThunk: WriteThunk = (type, payload) => (dispatch, _getState) =>
-//   dispatch({
-//     type,
-//     payload,
-//   });
+const writeThunk: WriteThunk = (type, payload) => (dispatch, _getState) =>
+  dispatch({
+    type,
+    payload,
+  });
