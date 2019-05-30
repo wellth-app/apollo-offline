@@ -10,8 +10,8 @@ import { offline } from "@redux-offline/redux-offline";
 import defaultOfflineConfig from "@redux-offline/redux-offline/lib/defaults";
 import { OfflineAction, Config } from "@redux-offline/redux-offline/lib/types";
 import thunk from "redux-thunk";
-import reducers, { State } from "../reducers";
-import { rootLogger } from "../utils";
+import reducers from "reducers";
+import { rootLogger } from "utils";
 
 const logger = rootLogger.extend("store");
 
@@ -31,17 +31,19 @@ export interface Options extends Partial<Config> {
   middleware: Middleware[];
   /// TODO: Figure out wtf AsyncStorage conforms to and do that
   storage?: any;
+  dataIdFromObject: (obj: any) => string | null;
 }
 
 export const createOfflineStore = ({
   middleware,
   persistCallback,
   storage = undefined,
+  dataIdFromObject,
   ...offlineConfig
-}: Options): Store<State> => {
+}: Options): Store<any> => {
   logger("Creating offline store");
   return createStore(
-    combineReducers(reducers),
+    combineReducers(reducers({ dataIdFromObject })),
     typeof window !== "undefined" &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__ &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__(),

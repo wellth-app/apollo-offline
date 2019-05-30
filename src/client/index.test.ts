@@ -96,8 +96,8 @@ const getClient = (options?: Partial<ApolloOfflineClientOptions>) => {
   const defaultOptions: ApolloOfflineClientOptions = {
     onlineLink: createHttpLink({ uri: "some uri" }),
     disableOffline: false,
-    storage: new MemoryStorage(),
     offlineConfig: {
+      storage: new MemoryStorage(),
       discardCondition: () => false,
       callback: null, //console.warn.bind(console),
     },
