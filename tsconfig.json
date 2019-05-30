@@ -2,7 +2,7 @@
   "compilerOptions": {
     "outDir": "lib",
     "rootDir": "src",
-    "baseUrl": ".",
+    "baseUrl": "src",
     "pretty": true,
     "declaration": true,
     "sourceMap": true,
@@ -25,14 +25,12 @@
     "src/**/*.ts"
   ],
   "exclude": [
-    "lib",
     "src/**/__tests__/*.ts",
     "src/**/__mocks__/*.ts",
-    "./src/**/*.test.tsx",
-    "./src/**/*.test.ts",
-    "./src/**/*.spec.tsx",
-    "./src/**/*.spec.ts",
-    "node_modules",
+    "src/**/*.test.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.spec.tsx",
+    "src/**/*.spec.ts",
   ],
   "compileOnSave": true
 }
