@@ -127,9 +127,8 @@ export default class ApolloOfflineClient<
           discard: discard(discardCondition, offlineCallback),
         });
 
-    // const cache: ApolloCache<any> = new InMemoryCache();
     const cache: ApolloCache<any> = disableOffline
-      ? customCache || new InMemoryCache()
+      ? customCache || new InMemoryCache(cacheOptions)
       : new OfflineCache({ store, storeCacheRootMutation }, cacheOptions);
 
     // !!!: Create the link with a `RehydrateLink` as the first link

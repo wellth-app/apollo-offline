@@ -1,4 +1,4 @@
-import { Reducer, ReducersMapObject, AnyAction } from "redux";
+import { Reducer, AnyAction } from "redux";
 import { IdGetter } from "apollo-cache-inmemory";
 import rehydrated from "./rehydrated";
 import cache from "./cache";

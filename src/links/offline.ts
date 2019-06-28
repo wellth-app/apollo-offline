@@ -263,6 +263,7 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
   const {
     [METADATA_KEY]: { idsMap },
   } = store.getState();
+
   const optimisticResponse = replaceUsingMap(
     { ...originalOptimisticResponse },
     idsMap,
