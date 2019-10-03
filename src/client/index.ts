@@ -13,20 +13,26 @@ import {
   FetchResult,
 } from "apollo-link";
 import { ApolloCache } from "apollo-cache";
-import { NormalizedCacheObject, InMemoryCache } from "apollo-cache-inmemory";
-import { NetworkCallback } from "@redux-offline/redux-offline/lib/types";
+import {
+  NormalizedCacheObject,
+  InMemoryCache,
+  ApolloReducerConfig,
+  defaultDataIdFromObject,
+} from "apollo-cache-inmemory";
 import OfflineLink, { offlineEffect, discard } from "../links/offline";
 import passthroughLink from "../links/passthrough";
 import resetState from "../actions/resetState";
-import { REHYDRATE_STORE } from "../actions/rehydrateStore";
 import { createOfflineStore, Discard } from "../store";
 import { rootLogger } from "../utils";
-import { State as AppState } from "../reducers";
+import {
+  default as OfflineCache,
+  OfflineCache as OfflineCacheType,
+} from "../cache";
 
 const logger = rootLogger.extend("client");
 
 const createNetworkLink = (
-  store: Store<AppState>,
+  store: Store<OfflineCacheType>,
   disableOffline: boolean = false,
   offlineLink?: ApolloLink,
   onlineLink?: ApolloLink,
@@ -48,8 +54,8 @@ export interface OfflineConfig {
   callback?: OfflineCallback;
   // Storage client for persistence (default undefined).
   storage?: any;
-  // Manual override for network detection (default undefined).
-  detectNetwork?: (callback: NetworkCallback) => void;
+  // Whether or not to store the root mutation in the cache (default false).
+  storeCacheRootMutation?: boolean;
 }
 
 export interface ApolloOfflineClientOptions {
@@ -63,12 +69,13 @@ export interface ApolloOfflineClientOptions {
   onlineLink?: ApolloLink;
   /// Configuration for offline behavior.
   offlineConfig?: OfflineConfig;
+  cacheOptions?: ApolloReducerConfig;
 }
 
 export default class ApolloOfflineClient<
   T extends NormalizedCacheObject
 > extends ApolloClient<T> {
-  private _store: Store<AppState>;
+  private _store: Store<OfflineCacheType>;
 
   // Resolves when `@redux-offline` rehydrates
   private hydratedPromise: Promise<ApolloOfflineClient<T>>;
@@ -84,11 +91,12 @@ export default class ApolloOfflineClient<
       reduxMiddleware = [],
       offlineLink = null,
       onlineLink = null,
+      cacheOptions = {},
       offlineConfig: {
         discardCondition,
         callback: offlineCallback = undefined,
         storage = undefined,
-        detectNetwork = undefined,
+        storeCacheRootMutation = false,
       },
     }: ApolloOfflineClientOptions,
     {
@@ -104,27 +112,24 @@ export default class ApolloOfflineClient<
     // ???: Should we fail if no `onlineLink` is provided?
     // ???: Should we fail if offline is disabled and no `onlineLink`?
 
+    const dataIdFromObject = disableOffline
+      ? () => null
+      : cacheOptions.dataIdFromObject || defaultDataIdFromObject;
     const store = disableOffline
       ? null
       : createOfflineStore({
+          storage,
+          dataIdFromObject,
           middleware: reduxMiddleware,
-          persistCallback: () => {
-            store.dispatch({ type: REHYDRATE_STORE });
-            resolveClient(this);
-          },
+          persistCallback: () => resolveClient(this),
           effect: (effect, action) =>
             offlineEffect(store, this, effect, action, offlineCallback),
           discard: discard(discardCondition, offlineCallback),
-          storage,
-          detectNetwork,
         });
 
-    // !!!: The "offline cache" mentioned in the comment below doesn't exist
-    // TODO: if `disableOffline`, use the provided custom cache, or create an InMemoryCache,
-    //       otherwise create a new offline cache.
-    // !!!: The default behavior, right now, is to use the provided cache
-    // const cache = disableOffline ? (customCache || new InMemoryCache()) : new OfflineCache()
-    const cache: ApolloCache<any> = customCache || new InMemoryCache();
+    const cache: ApolloCache<any> = disableOffline
+      ? customCache || new InMemoryCache(cacheOptions)
+      : new OfflineCache({ store, storeCacheRootMutation }, cacheOptions);
 
     // !!!: Create the link with a `RehydrateLink` as the first link
     // to ensure requests are queued until rehydration. This will be the first link

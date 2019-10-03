@@ -1,5 +1,8 @@
 import { DocumentNode, OperationDefinitionNode, FieldNode } from "graphql";
 import { resultKeyNameFromField } from "apollo-utilities";
+export * from "./replaceUsingMap";
+export * from "./getIds";
+export * from "./isUuid";
 
 export { default as rootLogger } from "./logger";
 

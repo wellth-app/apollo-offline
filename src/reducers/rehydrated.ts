@@ -1,12 +1,11 @@
 import { Action } from "redux";
-import { REHYDRATE_STORE } from "../actions/rehydrateStore";
+import { PERSIST_REHYDRATE } from "@redux-offline/redux-offline/lib/constants";
 
 export type State = boolean;
-const InitialState = false;
 
-export default (state: State = InitialState, action: Action) => {
+export default (state: State = false, action: Action) => {
   switch (action.type) {
-    case REHYDRATE_STORE:
+    case PERSIST_REHYDRATE:
       return true;
     default:
       return state;
