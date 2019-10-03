@@ -277,143 +277,142 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
     const getObservableFromLinkFunction: Function = (client.queryManager as any)
       .getObservableFromLink;
 
-    getObservableFromLinkFunction
-      .call(
-        client.queryManager,
-        mutation,
-        {
-          apolloOfflineContext: {
-            execute,
-          },
-          ...context,
-          optimisticResponse,
+    const observable: Observable<
+      FetchResult<T>
+    > = getObservableFromLinkFunction.call(
+      client.queryManager,
+      mutation,
+      {
+        apolloOfflineContext: {
+          execute,
         },
-        variables,
-        false,
-      )
-      .subscribe({
-        next: (data) => {
-          boundSaveServerId(store, optimisticResponse, data.data);
+        ...context,
+        optimisticResponse,
+      },
+      variables,
+      false,
+    );
 
-          const {
-            [METADATA_KEY]: {
-              idsMap,
-              // snapshot: { cache: cacheSnapshot },
-            },
-            offline: {
-              outbox: [, ...enqueuedMutations],
-            },
-          } = store.getState();
+    observable.subscribe({
+      next: (data) => {
+        boundSaveServerId(store, optimisticResponse, data.data);
 
-          // client.cache.restore(cacheSnapshot as T);
+        const {
+          [METADATA_KEY]: {
+            idsMap,
+            // snapshot: { cache: cacheSnapshot },
+          },
+          offline: {
+            outbox: [, ...enqueuedMutations],
+          },
+        } = store.getState();
 
-          const dataStore = client.queryManager.dataStore;
+        // client.cache.restore(cacheSnapshot as T);
 
-          if (fetchPolicy !== "no-cache") {
-            dataStore.markMutationResult({
-              mutationId: null,
-              result: data,
-              document: mutation,
-              variables,
-              updateQueries: {}, // TODO: populate this?
-              update,
-            });
-          }
+        const dataStore = client.queryManager.dataStore;
 
-          const enqueuedActionsFilter = [offlineEffectConfig.enqueueAction];
+        if (fetchPolicy !== "no-cache") {
+          dataStore.markMutationResult({
+            mutationId: null,
+            result: data,
+            document: mutation,
+            variables,
+            updateQueries: {}, // TODO: populate this?
+            update,
+          });
+        }
 
-          enqueuedMutations
-            .filter(({ type }) => enqueuedActionsFilter.indexOf(type) > -1)
-            .forEach(({ meta: { offline: { effect } } }) => {
-              const {
-                operation: { variables = {}, query: document = null } = {},
-                update,
-                optimisticResponse: originalOptimisticResponse,
-                fetchPolicy,
-              } = effect as EnqueuedMutationEffect<any>;
+        const enqueuedActionsFilter = [offlineEffectConfig.enqueueAction];
 
-              if (typeof update !== "function") {
-                logger("No update function for mutation", {
-                  document,
-                  variables,
-                });
-                return;
-              }
-
-              const result = {
-                data: replaceUsingMap(
-                  { ...originalOptimisticResponse },
-                  idsMap,
-                ),
-              };
-
-              if (fetchPolicy !== "no-cache") {
-                logger("Running update function for mutation", {
-                  document,
-                  variables,
-                });
-
-                dataStore.markMutationResult({
-                  mutationId: null,
-                  result,
-                  document,
-                  variables,
-                  updateQueries: {},
-                  update,
-                });
-              }
-            });
-
-          client.queryManager.broadcastQueries();
-          resolve({ data });
-
-          if (observer.next && !observer.closed) {
-            observer.next({ ...data, [IS_OPTIMISTIC_KEY]: false });
-            observer.complete();
-          }
-
-          if (typeof callback === "function") {
-            const mutationName = getOperationFieldName(mutation);
+        enqueuedMutations
+          .filter(({ type }) => enqueuedActionsFilter.indexOf(type) > -1)
+          .forEach(({ meta: { offline: { effect } } }) => {
             const {
-              additionalDataContext: { newVars = operation.variables } = {},
-              ...restContext
-            } = data.context || {};
+              operation: { variables = {}, query: document = null } = {},
+              update,
+              optimisticResponse: originalOptimisticResponse,
+              fetchPolicy,
+            } = effect as EnqueuedMutationEffect<any>;
 
-            if (!Object.keys(restContext || {}).length) {
-              delete data.context;
-            } else {
-              data.context = restContext;
+            if (typeof update !== "function") {
+              logger("No update function for mutation", {
+                document,
+                variables,
+              });
+              return;
             }
 
-            tryFunctionOrLogError(() => {
-              const errors = data.errors
+            const result = {
+              data: replaceUsingMap({ ...originalOptimisticResponse }, idsMap),
+            };
+
+            if (fetchPolicy !== "no-cache") {
+              logger("Running update function for mutation", {
+                document,
+                variables,
+              });
+
+              dataStore.markMutationResult({
+                mutationId: null,
+                result,
+                document,
+                variables,
+                updateQueries: {},
+                update,
+              });
+            }
+          });
+
+        client.queryManager.broadcastQueries();
+        resolve({ data });
+
+        if (observer.next && !observer.closed) {
+          observer.next({ ...data, [IS_OPTIMISTIC_KEY]: false });
+          observer.complete();
+        }
+
+        if (typeof callback === "function") {
+          const mutationName = getOperationFieldName(mutation);
+          const {
+            additionalDataContext: { newVars = variables } = {},
+            ...restContext
+          } = data.context || {};
+
+          if (!Object.keys(restContext || {}).length) {
+            delete data.context;
+          } else {
+            data.context = restContext;
+          }
+
+          tryFunctionOrLogError(() => {
+            const errors = data.errors
+              ? {
+                  mutation: mutationName,
+                  variables: newVars,
+                  error: new ApolloError({
+                    graphQLErrors: [...data.errors],
+                  }),
+                  notified: !!observer.next,
+                }
+              : null;
+            const success =
+              errors === null
                 ? {
                     mutation: mutationName,
                     variables: newVars,
-                    error: new ApolloError({
-                      graphQLErrors: [...data.errors],
-                    }),
+                    ...data,
                     notified: !!observer.next,
                   }
                 : null;
-              const success =
-                errors === null
-                  ? {
-                      mutation: mutationName,
-                      variables: newVars,
-                      ...data,
-                      notified: !!observer.next,
-                    }
-                  : null;
-              callback(errors, success);
-            });
-          }
-        },
-        error: (error) => {
-          logger("Error executing link:", error);
-          reject(error);
-        },
-      });
+            callback(errors, success);
+          });
+        }
+      },
+      error: (error) => {
+        logger("Error executing link:", error);
+        reject(error);
+      },
+    });
   });
 };
 
