@@ -274,146 +274,146 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       client.initQueryManager();
     }
 
-    // !!!: Probably not super legit but AWS does it so we must be ok
-    const buildOperationForLink: Function = (client.queryManager as any)
-      .buildOperationForLink;
-    const extraContext = {
-      apolloOfflineContext: {
-        execute,
-      },
-      ...context,
-      optimisticResponse,
-    };
+    const getObservableFromLinkFunction: Function = (client.queryManager as any)
+      .getObservableFromLink;
 
-    // Reconstruct the context of the operation
-    const operation = buildOperationForLink.call(
-      client.queryManager,
-      mutation,
-      variables,
-      extraContext,
-    );
-
-    logger("Executing link", operation);
-    _execute(client.link, operation).subscribe({
-      next: (data) => {
-        boundSaveServerId(store, optimisticResponse, data.data);
-
-        const {
-          [METADATA_KEY]: {
-            idsMap,
-            // snapshot: { cache: cacheSnapshot },
+    getObservableFromLinkFunction
+      .call(
+        client.queryManager,
+        mutation,
+        {
+          apolloOfflineContext: {
+            execute,
           },
-          offline: {
-            outbox: [, ...enqueuedMutations],
-          },
-        } = store.getState();
+          ...context,
+          optimisticResponse,
+        },
+        variables,
+        false,
+      )
+      .subscribe({
+        next: (data) => {
+          boundSaveServerId(store, optimisticResponse, data.data);
 
-        // client.cache.restore(cacheSnapshot as T);
-
-        const dataStore = client.queryManager.dataStore;
-
-        if (fetchPolicy !== "no-cache") {
-          dataStore.markMutationResult({
-            mutationId: null,
-            result: data,
-            document: mutation,
-            variables,
-            updateQueries: {}, // TODO: populate this?
-            update,
-          });
-        }
-
-        const enqueuedActionsFilter = [offlineEffectConfig.enqueueAction];
-
-        enqueuedMutations
-          .filter(({ type }) => enqueuedActionsFilter.indexOf(type) > -1)
-          .forEach(({ meta: { offline: { effect } } }) => {
-            const {
-              operation: { variables = {}, query: document = null } = {},
-              update,
-              optimisticResponse: originalOptimisticResponse,
-              fetchPolicy,
-            } = effect as EnqueuedMutationEffect<any>;
-
-            if (typeof update !== "function") {
-              logger("No update function for mutation", {
-                document,
-                variables,
-              });
-              return;
-            }
-
-            const result = {
-              data: replaceUsingMap({ ...originalOptimisticResponse }, idsMap),
-            };
-
-            if (fetchPolicy !== "no-cache") {
-              logger("Running update function for mutation", {
-                document,
-                variables,
-              });
-
-              dataStore.markMutationResult({
-                mutationId: null,
-                result,
-                document,
-                variables,
-                updateQueries: {},
-                update,
-              });
-            }
-          });
-
-        client.queryManager.broadcastQueries();
-        resolve({ data });
-
-        if (observer.next && !observer.closed) {
-          observer.next({ ...data, [IS_OPTIMISTIC_KEY]: false });
-          observer.complete();
-        }
-
-        if (typeof callback === "function") {
-          const mutationName = getOperationFieldName(mutation);
           const {
-            additionalDataContext: { newVars = operation.variables } = {},
-            ...restContext
-          } = data.context || {};
+            [METADATA_KEY]: {
+              idsMap,
+              // snapshot: { cache: cacheSnapshot },
+            },
+            offline: {
+              outbox: [, ...enqueuedMutations],
+            },
+          } = store.getState();
 
-          if (!Object.keys(restContext || {}).length) {
-            delete data.context;
-          } else {
-            data.context = restContext;
+          // client.cache.restore(cacheSnapshot as T);
+
+          const dataStore = client.queryManager.dataStore;
+
+          if (fetchPolicy !== "no-cache") {
+            dataStore.markMutationResult({
+              mutationId: null,
+              result: data,
+              document: mutation,
+              variables,
+              updateQueries: {}, // TODO: populate this?
+              update,
+            });
           }
 
-          tryFunctionOrLogError(() => {
-            const errors = data.errors
-              ? {
-                  mutation: mutationName,
-                  variables: newVars,
-                  error: new ApolloError({
-                    graphQLErrors: [...data.errors],
-                  }),
-                  notified: !!observer.next,
-                }
-              : null;
-            const success =
-              errors === null
+          const enqueuedActionsFilter = [offlineEffectConfig.enqueueAction];
+
+          enqueuedMutations
+            .filter(({ type }) => enqueuedActionsFilter.indexOf(type) > -1)
+            .forEach(({ meta: { offline: { effect } } }) => {
+              const {
+                operation: { variables = {}, query: document = null } = {},
+                update,
+                optimisticResponse: originalOptimisticResponse,
+                fetchPolicy,
+              } = effect as EnqueuedMutationEffect<any>;
+
+              if (typeof update !== "function") {
+                logger("No update function for mutation", {
+                  document,
+                  variables,
+                });
+                return;
+              }
+
+              const result = {
+                data: replaceUsingMap(
+                  { ...originalOptimisticResponse },
+                  idsMap,
+                ),
+              };
+
+              if (fetchPolicy !== "no-cache") {
+                logger("Running update function for mutation", {
+                  document,
+                  variables,
+                });
+
+                dataStore.markMutationResult({
+                  mutationId: null,
+                  result,
+                  document,
+                  variables,
+                  updateQueries: {},
+                  update,
+                });
+              }
+            });
+
+          client.queryManager.broadcastQueries();
+          resolve({ data });
+
+          if (observer.next && !observer.closed) {
+            observer.next({ ...data, [IS_OPTIMISTIC_KEY]: false });
+            observer.complete();
+          }
+
+          if (typeof callback === "function") {
+            const mutationName = getOperationFieldName(mutation);
+            const {
+              additionalDataContext: { newVars = operation.variables } = {},
+              ...restContext
+            } = data.context || {};
+
+            if (!Object.keys(restContext || {}).length) {
+              delete data.context;
+            } else {
+              data.context = restContext;
+            }
+
+            tryFunctionOrLogError(() => {
+              const errors = data.errors
                 ? {
                     mutation: mutationName,
                     variables: newVars,
-                    ...data,
+                    error: new ApolloError({
+                      graphQLErrors: [...data.errors],
+                    }),
                     notified: !!observer.next,
                   }
                 : null;
-            callback(errors, success);
-          });
-        }
-      },
-      error: (error) => {
-        logger("Error executing link:", error);
-        reject(error);
-      },
-    });
+              const success =
+                errors === null
+                  ? {
+                      mutation: mutationName,
+                      variables: newVars,
+                      ...data,
+                      notified: !!observer.next,
+                    }
+                  : null;
+              callback(errors, success);
+            });
+          }
+        },
+        error: (error) => {
+          logger("Error executing link:", error);
+          reject(error);
+        },
+      });
   });
 };
 
