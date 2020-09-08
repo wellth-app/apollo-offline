@@ -216,4 +216,4 @@ export default class ApolloOfflineClient<
   }
 }
 
-export { ApolloOfflineClient };
+export { ApolloOfflineClient, CacheUpdates };
