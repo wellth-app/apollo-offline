@@ -19,8 +19,9 @@ import {
   ApolloReducerConfig,
   defaultDataIdFromObject,
 } from "apollo-cache-inmemory";
-import OfflineLink, { offlineEffect, discard } from "../links/offline";
+import { offlineEffect, discard, CacheUpdates } from "../links/offline";
 import passthroughLink from "../links/passthrough";
+import { createNetworkLink } from "../links/createNetworkLink";
 import resetState from "../actions/resetState";
 import { createOfflineStore, Discard } from "../store";
 import { rootLogger } from "../utils";
@@ -30,20 +31,6 @@ import {
 } from "../cache";
 
 const logger = rootLogger.extend("client");
-
-const createNetworkLink = (
-  store: Store<OfflineCacheType>,
-  disableOffline: boolean = false,
-  offlineLink?: ApolloLink,
-  onlineLink?: ApolloLink,
-) =>
-  ApolloLink.from(
-    [
-      offlineLink,
-      disableOffline ? null : new OfflineLink(store),
-      onlineLink,
-    ].filter(Boolean),
-  );
 
 export type OfflineCallback = (error: any, success: any) => void;
 
@@ -70,13 +57,14 @@ export interface ApolloOfflineClientOptions {
   /// Configuration for offline behavior.
   offlineConfig?: OfflineConfig;
   cacheOptions?: ApolloReducerConfig;
+  mutationCacheUpdates?: CacheUpdates;
 }
 
 export default class ApolloOfflineClient<
   T extends NormalizedCacheObject
 > extends ApolloClient<T> {
+  public mutationCacheUpdates: CacheUpdates;
   private _store: Store<OfflineCacheType>;
-
   // Resolves when `@redux-offline` rehydrates
   private hydratedPromise: Promise<ApolloOfflineClient<T>>;
   private _disableOffline: boolean;
@@ -92,6 +80,7 @@ export default class ApolloOfflineClient<
       offlineLink = null,
       onlineLink = null,
       cacheOptions = {},
+      mutationCacheUpdates = {},
       offlineConfig: {
         discardCondition,
         callback: offlineCallback = undefined,
@@ -123,7 +112,14 @@ export default class ApolloOfflineClient<
           middleware: reduxMiddleware,
           persistCallback: () => resolveClient(this),
           effect: (effect, action) =>
-            offlineEffect(store, this, effect, action, offlineCallback),
+            offlineEffect(
+              store,
+              this,
+              effect,
+              action,
+              offlineCallback,
+              mutationCacheUpdates,
+            ),
           discard: discard(discardCondition, offlineCallback),
         });
 
@@ -153,7 +149,7 @@ export default class ApolloOfflineClient<
       }),
       !!customLink
         ? customLink
-        : createNetworkLink(store, disableOffline, offlineLink, onlineLink),
+        : createNetworkLink({ store, disableOffline, offlineLink, onlineLink }),
     ]);
 
     super({
@@ -162,6 +158,7 @@ export default class ApolloOfflineClient<
       cache,
     });
 
+    this.mutationCacheUpdates = mutationCacheUpdates;
     this._store = store;
     this._disableOffline = disableOffline;
     this.hydratedPromise = disableOffline

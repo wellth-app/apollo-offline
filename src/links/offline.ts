@@ -44,12 +44,6 @@ const logger = rootLogger.extend("offline-link");
 
 export type DetectNetwork = () => boolean;
 
-type Store = ReduxStore<OfflineCache>;
-
-export interface Options {
-  store: Store;
-}
-
 const IS_OPTIMISTIC_KEY =
   typeof Symbol !== "undefined" ? Symbol("isOptimistic") : "@@isOptimistic";
 const OPERATION_TYPE_MUTATION = "mutation";
@@ -76,10 +70,20 @@ const actions = {
 //      for links dependent upon context between `OfflineLink` and network execution.
 const APOLLO_PRIVATE_CONTEXT_KEYS = ["cache", "getCacheKey", "clientAwareness"];
 
+export interface CacheUpdates {
+  [key: string]: MutationUpdaterFn;
+}
+
+type Store = ReduxStore<OfflineCache>;
+
+export interface OfflineLinkOptions {
+  store: Store;
+}
+
 export default class OfflineLink extends ApolloLink {
   private store: Store;
 
-  constructor(store: Store) {
+  constructor({ store }: OfflineLinkOptions) {
     super();
     this.store = store;
   }
@@ -246,11 +250,12 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
   effect: EnqueuedMutationEffect<any>,
   action: OfflineAction,
   callback: OfflineCallback,
+  mutationCacheUpdates: CacheUpdates,
 ): Promise<FetchResult<Record<string, any>, Record<string, any>>> => {
   const execute = true;
   const {
     optimisticResponse: originalOptimisticResponse,
-    operation: { variables, query: mutation, context },
+    operation: { variables, query: mutation, context, operationName },
     update,
     // updateQueries,
     // refetchQueries,
@@ -311,6 +316,8 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
 
         const dataStore = client.queryManager.dataStore;
 
+        const mutationUpdate = update || mutationCacheUpdates[operationName];
+
         if (fetchPolicy !== "no-cache") {
           dataStore.markMutationResult({
             mutationId: null,
@@ -318,7 +325,7 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
             document: mutation,
             variables,
             updateQueries: {}, // TODO: populate this?
-            update,
+            update: mutationUpdate,
           });
         }
 
@@ -328,13 +335,20 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
           .filter(({ type }) => enqueuedActionsFilter.indexOf(type) > -1)
           .forEach(({ meta: { offline: { effect } } }) => {
             const {
-              operation: { variables = {}, query: document = null } = {},
+              operation: {
+                variables = {},
+                query: document = null,
+                operationName = null,
+              } = {},
               update,
               optimisticResponse: originalOptimisticResponse,
               fetchPolicy,
             } = effect as EnqueuedMutationEffect<any>;
 
-            if (typeof update !== "function") {
+            const enqueuedMutationUpdate =
+              update || mutationCacheUpdates[operationName];
+
+            if (typeof enqueuedMutationUpdate !== "function") {
               logger("No update function for mutation", {
                 document,
                 variables,
@@ -358,7 +372,7 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
                 document,
                 variables,
                 updateQueries: {},
-                update,
+                update: enqueuedMutationUpdate,
               });
             }
           });

@@ -45,7 +45,7 @@
     "graphql": "14.0.2",
     "graphql-tag": "^2.9.2",
     "jest": "^23.4.2",
-    "prettier-eslint": "^8.8.1",
+    "prettier-eslint": "^9.0.0",
     "react": "16.8.6",
     "react-native": "^0.60.0",
     "redux": "^3.0.1",
