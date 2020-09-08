@@ -32,4 +32,4 @@ export default class ApolloOfflineClient<T extends NormalizedCacheObject> extend
     reset(): Promise<void>;
     mutate<T, TVariables = OperationVariables>(options: MutationOptions<T, TVariables>): Promise<FetchResult<T>>;
 }
-export { ApolloOfflineClient };
+export { ApolloOfflineClient, CacheUpdates };
