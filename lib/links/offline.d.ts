@@ -11,7 +11,7 @@ import { Discard } from "../store";
 export declare type DetectNetwork = () => boolean;
 export declare const isOptimistic: (obj: any) => any;
 export interface CacheUpdates {
-    [key: string]: MutationUpdaterFn;
+    [key: string]: (context: any) => MutationUpdaterFn;
 }
 declare type Store = ReduxStore<OfflineCache>;
 export interface OfflineLinkOptions {

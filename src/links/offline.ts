@@ -71,7 +71,7 @@ const actions = {
 const APOLLO_PRIVATE_CONTEXT_KEYS = ["cache", "getCacheKey", "clientAwareness"];
 
 export interface CacheUpdates {
-  [key: string]: MutationUpdaterFn;
+  [key: string]: (context: any) => MutationUpdaterFn;
 }
 
 type Store = ReduxStore<OfflineCache>;
@@ -316,7 +316,11 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
 
         const dataStore = client.queryManager.dataStore;
 
-        const mutationUpdate = update || mutationCacheUpdates[operationName];
+        let mutationUpdate: MutationUpdaterFn | undefined = update;
+        if (!mutationUpdate && mutationCacheUpdates[operationName]) {
+          const contextUpdate = mutationCacheUpdates[operationName];
+          mutationUpdate = contextUpdate(context);
+        }
 
         if (fetchPolicy !== "no-cache") {
           dataStore.markMutationResult({
@@ -345,8 +349,14 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
               fetchPolicy,
             } = effect as EnqueuedMutationEffect<any>;
 
-            const enqueuedMutationUpdate =
-              update || mutationCacheUpdates[operationName];
+            let enqueuedMutationUpdate: MutationUpdaterFn | undefined = update;
+            if (
+              !enqueuedMutationUpdate &&
+              mutationCacheUpdates[operationName]
+            ) {
+              const contextUpdate = mutationCacheUpdates[operationName];
+              enqueuedMutationUpdate = contextUpdate(context);
+            }
 
             if (typeof enqueuedMutationUpdate !== "function") {
               logger("No update function for mutation", {
