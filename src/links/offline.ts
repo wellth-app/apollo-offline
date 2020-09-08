@@ -274,27 +274,26 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       client.initQueryManager();
     }
 
-    // !!!: Probably not super legit but AWS does it so we must be ok
-    const buildOperationForLink: Function = (client.queryManager as any)
-      .buildOperationForLink;
-    const extraContext = {
-      apolloOfflineContext: {
-        execute,
-      },
-      ...context,
-      optimisticResponse,
-    };
+    const getObservableFromLinkFunction: Function = (client.queryManager as any)
+      .getObservableFromLink;
 
-    // Reconstruct the context of the operation
-    const operation = buildOperationForLink.call(
+    const observable: Observable<
+      FetchResult<T>
+    > = getObservableFromLinkFunction.call(
       client.queryManager,
       mutation,
+      {
+        apolloOfflineContext: {
+          execute,
+        },
+        ...context,
+        optimisticResponse,
+      },
       variables,
-      extraContext,
+      false,
     );
 
-    logger("Executing link", operation);
-    _execute(client.link, operation).subscribe({
+    observable.subscribe({
       next: (data) => {
         boundSaveServerId(store, optimisticResponse, data.data);
 
@@ -375,7 +374,7 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
         if (typeof callback === "function") {
           const mutationName = getOperationFieldName(mutation);
           const {
-            additionalDataContext: { newVars = operation.variables } = {},
+            additionalDataContext: { newVars = variables } = {},
             ...restContext
           } = data.context || {};
 
