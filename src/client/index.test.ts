@@ -390,100 +390,83 @@ describe("ApolloOfflineClient", () => {
           // Ensure the optimistic response has been removed from the cache
           const cacheState = client.cache.extract(true);
           expect(cacheState).toEqual({});
-          expect({}).not.toMatchObject({
-            [`Todo:${localId}`]: optimisticResponse.addTodo,
-          });
-          // ???: This test fails if the cache is empty...
-          // expect(cacheState).not.toMatchObject({
-          //   [`Todo:${localId}`]: optimisticResponse.addTodo,
-          // });
         });
 
         // !!!: The following two tests are failing becuase the `client.mutate` call doesn't resolve...
 
-        // it("removes optimistic responses from the cache if the request is to be discarded (NetworkError.statusCode > 400)", async () => {
-        //   const errorMock = {
-        //     statusCode: 401,
-        //     message: "Access to resource forbidden",
-        //     name: "401: Forbidden",
-        //   };
+        /*
+        it("removes optimistic responses from the cache if the request is to be discarded (NetworkError.statusCode > 400)", async () => {
+          const errorMock = {
+            statusCode: 401,
+            message: "Access to resource forbidden",
+            name: "401: Forbidden",
+          };
 
-        //   const networkError = createNetworkError(errorMock);
-        //   mockNetworkError(networkError);
+          const networkError = createNetworkError(errorMock);
+          mockNetworkError(networkError);
 
-        //   const client = getClient({
-        //     disableOffline,
-        //     offlineConfig: {
-        //       discardCondition: () => false,
-        //     },
-        //   });
+          const client = getClient({
+            disableOffline,
+            offlineConfig: {
+              discardCondition: () => false,
+            },
+          });
 
-        //   // Execute the request
-        //   try {
-        //     await client.mutate({
-        //       mutation,
-        //       variables,
-        //       optimisticResponse,
-        //     });
+          // Execute the request
+          try {
+            await client.mutate({
+              mutation,
+              variables,
+              optimisticResponse,
+            });
 
-        //     fail("Error wasn't thrown!");
-        //   } catch (error) {
-        //     expect(error).toMatchObject(networkError);
-        //   }
+            fail("Error wasn't thrown!");
+          } catch (error) {
+            expect(error).toMatchObject(networkError);
+          }
 
-        //   // Ensure the optimistic response has been removed from the cache
-        //   const cacheState = client.cache.extract(true);
-        //   expect(cacheState).toEqual({});
-        //   expect({}).not.toMatchObject({
-        //     [`Todo:${localId}`]: optimisticResponse.addTodo,
-        //   });
-        //   // ???: This test fails if the cache is empty...
-        //   // expect(cacheState).not.toMatchObject({
-        //   //   [`Todo:${localId}`]: optimisticResponse.addTodo,
-        //   // });
-        // });
+          // Ensure the optimistic response has been removed from the cache
+          const cacheState = client.cache.extract(true);
+          expect(cacheState).toEqual({});
+        });
+        */
 
-        // it("removes optimistic responses from the cache if the request is to be discarded (offlineConfig.discardCondition === true)", async () => {
-        //   const errorMock = {
-        //     statusCode: 200,
-        //     message: "Throw the thing away",
-        //     name: "Discard Error",
-        //   };
+        /*
+        it("removes optimistic responses from the cache if the request is to be discarded (offlineConfig.discardCondition === true)", async () => {
+          const errorMock = {
+            statusCode: 200,
+            message: "Throw the thing away",
+            name: "Discard Error",
+          };
 
-        //   const networkError = createNetworkError(errorMock);
-        //   mockNetworkError(networkError);
+          const networkError = createNetworkError(errorMock);
+          mockNetworkError(networkError);
 
-        //   const client = getClient({
-        //     disableOffline,
-        //     offlineConfig: {
-        //       discardCondition: () => true,
-        //     },
-        //   });
+          const client = getClient({
+            disableOffline,
+            offlineConfig: {
+              discardCondition: () => true,
+            },
+          });
 
-        //   // Execute the request
-        //   try {
-        //     await client.mutate({
-        //       mutation,
-        //       variables,
-        //       optimisticResponse,
-        //     });
+          // Execute the request
+          try {
+            await client.mutate({
+              mutation,
+              variables,
+              optimisticResponse,
+            });
 
-        //     fail("Error wasn't thrown!");
-        //   } catch (error) {
-        //     expect(error).toMatchObject(networkError);
-        //   }
+            fail("Error wasn't thrown!");
+          } catch (error) {
+            expect(error).toMatchObject(networkError);
+          }
 
-        //   // Ensure the optimistic response has been removed from the cache
-        //   const cacheState = client.cache.extract(true);
-        //   expect(cacheState).toEqual({});
-        //   expect({}).not.toMatchObject({
-        //     [`Todo:${localId}`]: optimisticResponse.addTodo,
-        //   });
-        //   // ???: This test fails if the cache is empty...
-        //   // expect(cacheState).not.toMatchObject({
-        //   //   [`Todo:${localId}`]: optimisticResponse.addTodo,
-        //   // });
-        // });
+          // Ensure the optimistic response has been removed from the cache
+          const cacheState = client.cache.extract(true);
+          expect(cacheState).toEqual({});
+        });
+        */
       });
     });
 
