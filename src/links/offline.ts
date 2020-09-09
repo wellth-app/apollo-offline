@@ -344,12 +344,6 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       next: (data) => {
         boundSaveServerId(store, optimisticResponse, data.data);
 
-        let mutationUpdate: MutationUpdaterFn | undefined = update;
-        if (!mutationUpdate && mutationCacheUpdates[operationName]) {
-          const contextUpdate = mutationCacheUpdates[operationName];
-          mutationUpdate = contextUpdate(context);
-        }
-
         queryManager.mutationStore.markMutationResult(mutationId);
 
         if (fetchPolicy !== "no-cache") {
@@ -475,6 +469,7 @@ const updateCacheWithEnqueuedMutationUpdates = (
         logger("Running update function for mutation", {
           document,
           variables,
+          operationName,
         });
 
         client.queryManager.dataStore.markMutationResult({
