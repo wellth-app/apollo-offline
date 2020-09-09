@@ -263,8 +263,18 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
 
   await client.hydrated();
 
+  if (!client.queryManager) {
+    client.initQueryManager();
+  }
+
+  const queryManager = client.queryManager;
+  const dataStore = client.queryManager.dataStore;
+
   const {
     [METADATA_KEY]: { idsMap },
+    offline: {
+      outbox: [, ...enqueuedMutations],
+    },
   } = store.getState();
 
   const optimisticResponse = replaceUsingMap(
@@ -272,54 +282,51 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
     idsMap,
   );
 
+  // Look up the mutation update function in `mutationCacheUpdates`
+  // and mark the mutation as initialized to trigger updates
+  // with optimistic responses
+  let mutationUpdate: MutationUpdaterFn | undefined = update;
+  if (!mutationUpdate && mutationCacheUpdates[operationName]) {
+    const contextUpdate = mutationCacheUpdates[operationName];
+    mutationUpdate = contextUpdate(context);
+  }
+
+  const mutationId = queryManager.generateQueryId();
+
+  // Track the mutation in the query manager
+  const setQueryFunction: Function = (queryManager as any).setQuery;
+  setQueryFunction.call(queryManager, mutationId, () => ({
+    document: mutation,
+  }));
+
+  queryManager.mutationStore.initMutation(mutationId, mutation, variables);
+
+  dataStore.markMutationInit({
+    mutationId: mutationId,
+    document: mutation,
+    variables,
+    updateQueries: {},
+    update: mutationUpdate,
+    optimisticResponse,
+  });
+
+  updateCacheWithEnqueuedMutationUpdates(
+    enqueuedMutations,
+    context,
+    idsMap,
+    mutationCacheUpdates,
+    client,
+  );
+
   return new Promise((resolve, reject) => {
-    if (!client.queryManager) {
-      client.initQueryManager();
-    }
-
-    // Look up the mutation update function in `mutationCacheUpdates`
-    // and mark the mutation as initialized to trigger updates
-    // with optimistic responses
-    let mutationUpdate: MutationUpdaterFn | undefined = update;
-    if (!mutationUpdate && mutationCacheUpdates[operationName]) {
-      const contextUpdate = mutationCacheUpdates[operationName];
-      mutationUpdate = contextUpdate(context);
-    }
-
-    const mutationId = client.queryManager.generateQueryId();
-
-    // Track the mutation in the query manager
-    const setQueryFunction: Function = (client.queryManager as any).setQuery;
-    setQueryFunction.call(client.queryManager, mutationId, () => ({
-      document: mutation,
-    }));
-
-    // Track the mutation in the mutation store
-    client.queryManager.mutationStore.initMutation(
-      mutationId,
-      mutation,
-      variables,
-    );
-
-    client.queryManager.dataStore.markMutationInit({
-      mutationId: mutationId,
-      document: mutation,
-      variables,
-      updateQueries: {},
-      update: mutationUpdate,
-      optimisticResponse,
-    });
-
-    client.queryManager.broadcastQueries();
-
     // Get the observable for executing the mutation on the link
     // chain
-    const getObservableFromLinkFunction: Function = (client.queryManager as any)
+    const getObservableFromLinkFunction: Function = (queryManager as any)
       .getObservableFromLink;
     const observable: Observable<
       FetchResult<T>
     > = getObservableFromLinkFunction.call(
-      client.queryManager,
+      queryManager,
       mutation,
       {
         apolloOfflineContext: {
@@ -337,25 +344,13 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       next: (data) => {
         boundSaveServerId(store, optimisticResponse, data.data);
 
-        const {
-          [METADATA_KEY]: {
-            idsMap,
-            // snapshot: { cache: cacheSnapshot },
-          },
-          offline: {
-            outbox: [, ...enqueuedMutations],
-          },
-        } = store.getState();
-
-        // client.cache.restore(cacheSnapshot as T);
-
-        const dataStore = client.queryManager.dataStore;
-
         let mutationUpdate: MutationUpdaterFn | undefined = update;
         if (!mutationUpdate && mutationCacheUpdates[operationName]) {
           const contextUpdate = mutationCacheUpdates[operationName];
           mutationUpdate = contextUpdate(context);
         }
+
+        queryManager.mutationStore.markMutationResult(mutationId);
 
         if (fetchPolicy !== "no-cache") {
           dataStore.markMutationResult({
@@ -368,66 +363,13 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
           });
         }
 
-        // Iterate through enqueued mutations and execute their update functions
-        // with their optimistic response updated for the executed query.
-        // We don't do the same "tracking" in the data/mutation store as above
-        // because these are just optimistic responses, and will get their own
-        // tracking when executed via the queue.
-        const enqueuedActionsFilter = [offlineEffectConfig.enqueueAction];
-        enqueuedMutations
-          .filter(({ type }) => enqueuedActionsFilter.indexOf(type) > -1)
-          .forEach(({ meta: { offline: { effect } } }) => {
-            const {
-              operation: {
-                variables = {},
-                query: document = null,
-                operationName = null,
-              } = {},
-              update,
-              optimisticResponse: originalOptimisticResponse,
-              fetchPolicy,
-            } = effect as EnqueuedMutationEffect<any>;
-
-            let enqueuedMutationUpdate: MutationUpdaterFn | undefined = update;
-            if (
-              !enqueuedMutationUpdate &&
-              mutationCacheUpdates[operationName]
-            ) {
-              const contextUpdate = mutationCacheUpdates[operationName];
-              enqueuedMutationUpdate = contextUpdate(context);
-            }
-
-            if (typeof enqueuedMutationUpdate !== "function") {
-              logger("No update function for mutation", {
-                document,
-                variables,
-              });
-              return;
-            }
-
-            const result = {
-              data: replaceUsingMap({ ...originalOptimisticResponse }, idsMap),
-            };
-
-            if (fetchPolicy !== "no-cache") {
-              logger("Running update function for mutation", {
-                document,
-                variables,
-              });
-
-              dataStore.markMutationResult({
-                mutationId: null,
-                result,
-                document,
-                variables,
-                updateQueries: {},
-                update: enqueuedMutationUpdate,
-              });
-            }
-          });
-
-        // Broadcast queries notifies observers that there have been updates to data
-        client.queryManager.broadcastQueries();
+        updateCacheWithEnqueuedMutationUpdates(
+          enqueuedMutations,
+          context,
+          idsMap,
+          mutationCacheUpdates,
+          client,
+        );
 
         // Resolve the promise with the query data
         resolve({ data });
@@ -483,6 +425,71 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       },
     });
   });
+};
+
+// Iterate through enqueued mutations and execute their update functions
+// with their optimistic response updated for the executed query.
+// We don't do the same "tracking" in the data/mutation store as above
+// because these are just optimistic responses, and will get their own
+// tracking when executed via the queue.
+const updateCacheWithEnqueuedMutationUpdates = (
+  enqueuedMutations,
+  context,
+  idsMap,
+  mutationCacheUpdates,
+  client,
+) => {
+  enqueuedMutations
+    .filter(({ type }) => enqueuedActionsFilter.indexOf(type) > -1)
+    .forEach(({ meta: { offline: { effect } } }) => {
+      const {
+        operation: {
+          variables = {},
+          query: document = null,
+          operationName = null,
+        } = {},
+        update,
+        optimisticResponse: originalOptimisticResponse,
+        fetchPolicy,
+      } = effect as EnqueuedMutationEffect<any>;
+
+      let enqueuedMutationUpdate: MutationUpdaterFn | undefined = update;
+      if (!enqueuedMutationUpdate && mutationCacheUpdates[operationName]) {
+        const contextUpdate = mutationCacheUpdates[operationName];
+        enqueuedMutationUpdate = contextUpdate(context);
+      }
+
+      if (typeof enqueuedMutationUpdate !== "function") {
+        logger("No update function for mutation", {
+          document,
+          variables,
+        });
+        return;
+      }
+
+      const result = {
+        data: replaceUsingMap({ ...originalOptimisticResponse }, idsMap),
+      };
+
+      if (fetchPolicy !== "no-cache") {
+        logger("Running update function for mutation", {
+          document,
+          variables,
+        });
+
+        client.queryManager.dataStore.markMutationResult({
+          mutationId: null,
+          result,
+          document,
+          variables,
+          updateQueries: {},
+          update: enqueuedMutationUpdate,
+        });
+      }
+    });
+
+  // Broadcast queries notifies observers that there have been updates to data
+  client.queryManager.broadcastQueries();
 };
 
 const boundSaveServerId = (store, optimisticResponse, data) =>
@@ -561,6 +568,8 @@ export const offlineEffectConfig = {
     }
   },
 };
+
+const enqueuedActionsFilter = [offlineEffectConfig.enqueueAction];
 
 const snapshotReducer = (state, action) => {
   const enqueuedMutations = enqueuedMutationsReducer(
