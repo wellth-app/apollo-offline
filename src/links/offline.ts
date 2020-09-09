@@ -310,6 +310,8 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       optimisticResponse,
     });
 
+    client.queryManager.broadcastQueries();
+
     // Get the observable for executing the mutation on the link
     // chain
     const getObservableFromLinkFunction: Function = (client.queryManager as any)
