@@ -4,6 +4,7 @@ import ApolloClient, {
   MutationOptions,
   ApolloClientOptions,
   OperationVariables,
+  MutationUpdaterFn,
 } from "apollo-client";
 import {
   ApolloLink,
@@ -12,6 +13,7 @@ import {
   NextLink,
   FetchResult,
 } from "apollo-link";
+import { getOperationName } from "apollo-utilities";
 import { ApolloCache } from "apollo-cache";
 import {
   NormalizedCacheObject,
@@ -195,12 +197,20 @@ export default class ApolloOfflineClient<
       ...otherOptions
     } = options;
 
+    const operationName = getOperationName(options.mutation);
+
+    let mutationUpdate: MutationUpdaterFn<T> | undefined = update;
+    if (!mutationUpdate && this.mutationCacheUpdates[operationName]) {
+      const contextUpdate = this.mutationCacheUpdates[operationName];
+      mutationUpdate = contextUpdate(originalContext);
+    }
+
     // Configure context for apollo-offline based on provided options
     const context = {
       ...originalContext,
       apolloOfflineContext: {
         execute,
-        update,
+        update: mutationUpdate,
         fetchPolicy,
         optimisticResponse,
       },
@@ -209,7 +219,7 @@ export default class ApolloOfflineClient<
     return super.mutate({
       optimisticResponse,
       context,
-      update,
+      update: mutationUpdate,
       fetchPolicy,
       ...otherOptions,
     });

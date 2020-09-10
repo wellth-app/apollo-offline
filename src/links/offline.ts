@@ -244,6 +244,8 @@ const enqueueMutation = <T>(
   );
 };
 
+type ResultRecord = Record<string, any>;
+
 export const offlineEffect = async <T extends NormalizedCacheObject>(
   store: Store,
   client: ApolloOfflineClient<T>,
@@ -251,7 +253,7 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
   action: OfflineAction,
   callback: OfflineCallback,
   mutationCacheUpdates: CacheUpdates,
-): Promise<FetchResult<Record<string, any>, Record<string, any>>> => {
+): Promise<FetchResult<ResultRecord, ResultRecord>> => {
   const execute = true;
   const {
     optimisticResponse: originalOptimisticResponse,
@@ -318,6 +320,9 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
     client,
   );
 
+  // Broadcast queries notifies observers that there have been updates to data
+  queryManager.broadcastQueries();
+
   return new Promise((resolve, reject) => {
     // Get the observable for executing the mutation on the link
     // chain
@@ -364,6 +369,9 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
           mutationCacheUpdates,
           client,
         );
+
+        // Broadcast queries notifies observers that there have been updates to data
+        queryManager.broadcastQueries();
 
         // Resolve the promise with the query data
         resolve({ data });
@@ -414,8 +422,20 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
         }
       },
       error: (error) => {
+        queryManager.mutationStore.markMutationError(mutationId, error);
+        dataStore.markMutationComplete({ mutationId, optimisticResponse });
+        queryManager.broadcastQueries();
+
+        setQueryFunction.call(queryManager, mutationId, () => ({
+          document: null,
+        }));
+
         logger("Error executing link:", error);
         reject(error);
+      },
+      complete: () => {
+        dataStore.markMutationComplete({ mutationId, optimisticResponse });
+        queryManager.broadcastQueries();
       },
     });
   });
@@ -428,10 +448,10 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
 // tracking when executed via the queue.
 const updateCacheWithEnqueuedMutationUpdates = (
   enqueuedMutations,
-  context,
+  context: any,
   idsMap,
-  mutationCacheUpdates,
-  client,
+  mutationCacheUpdates: CacheUpdates,
+  client: ApolloOfflineClient<any>,
 ) => {
   enqueuedMutations
     .filter(({ type }) => enqueuedActionsFilter.indexOf(type) > -1)
@@ -482,9 +502,6 @@ const updateCacheWithEnqueuedMutationUpdates = (
         });
       }
     });
-
-  // Broadcast queries notifies observers that there have been updates to data
-  client.queryManager.broadcastQueries();
 };
 
 const boundSaveServerId = (store, optimisticResponse, data) =>
