@@ -10,6 +10,7 @@ export declare type OfflineSyncMetadataState = {
         [key: string]: string;
     };
     snapshot: {
+        cache: NormalizedCacheObject;
         enqueuedMutations: number;
     };
 };

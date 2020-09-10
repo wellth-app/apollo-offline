@@ -22,22 +22,22 @@ import {
 } from "apollo-client";
 import { RefetchQueryDescription } from "apollo-client/core/watchQueryOptions";
 import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
-import { PERSIST_REHYDRATE } from "@redux-offline/redux-offline/lib/constants";
-import { NormalizedCacheObject } from "apollo-cache-inmemory";
+import {
+  NormalizedCacheObject,
+  defaultNormalizedCacheFactory,
+  StoreReader,
+} from "apollo-cache-inmemory";
 import { Store as ReduxStore } from "redux";
 import { FieldNode } from "graphql";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { QUEUE_OPERATION_ROLLBACK } from "../actions/queueOperationRollback";
 import saveServerId, { SAVE_SERVER_ID } from "../actions/saveServerId";
+import saveSnapshot, { SAVE_SNAPSHOT } from "../actions/saveSnapshot";
+import offlineEffectReducer from "../reducers/offlineEffect";
 import ApolloOfflineClient, { OfflineCallback } from "../client";
-import { OfflineCache, OfflineSyncMetadataState, METADATA_KEY } from "../cache";
-import {
-  rootLogger,
-  getOperationFieldName,
-  replaceUsingMap,
-  getIds,
-} from "../utils";
+import { OfflineCache, METADATA_KEY, NORMALIZED_CACHE_KEY } from "../cache";
+import { rootLogger, getOperationFieldName, replaceUsingMap } from "../utils";
 import { Discard } from "../store";
 
 const logger = rootLogger.extend("offline-link");
@@ -56,8 +56,7 @@ export const isOptimistic = (obj) =>
     : undefined;
 
 const actions = {
-  // TODO: Create a new action
-  // SAVE_SNAPSHOT: "SAVE_SNAPSHOT",
+  SAVE_SNAPSHOT: SAVE_SNAPSHOT,
   ENQUEUE: QUEUE_OPERATION,
   COMMIT: QUEUE_OPERATION_COMMIT,
   ROLLBACK: QUEUE_OPERATION_ROLLBACK,
@@ -108,7 +107,7 @@ export default class OfflineLink extends ApolloLink {
       const isQuery = operationType === OPERATION_TYPE_QUERY;
 
       if (!online && isQuery) {
-        const data = processOfflineQuery(operation);
+        const data = processOfflineQuery(operation, this.store);
         observer.next({ data });
         observer.complete();
         return () => null;
@@ -117,9 +116,20 @@ export default class OfflineLink extends ApolloLink {
       if (isMutation) {
         const {
           apolloOfflineContext: { execute = false } = {},
+          cache,
         } = operation.getContext();
 
         if (!execute) {
+          const {
+            [METADATA_KEY]: {
+              snapshot: { enqueuedMutations },
+            },
+          } = this.store.getState();
+
+          if (enqueuedMutations === 0) {
+            boundSaveSnapshot(this.store, cache);
+          }
+
           const data = enqueueMutation(operation, this.store, observer);
 
           if (!online) {
@@ -144,11 +154,25 @@ export default class OfflineLink extends ApolloLink {
   }
 }
 
-const processOfflineQuery = ({ query, variables, getContext }: Operation) => {
+const boundSaveServerId = (store, optimisticResponse, data) =>
+  store.dispatch(saveServerId(optimisticResponse, data));
+
+export const boundSaveSnapshot = (store, cache) =>
+  store.dispatch(saveSnapshot(cache));
+
+const processOfflineQuery = (
+  { query, variables, getContext }: Operation,
+  store: ReduxStore<OfflineCache>,
+) => {
+  const { [NORMALIZED_CACHE_KEY]: normalizedCache = {} } = store.getState();
   const { cache } = getContext();
 
+  const offlineStore = defaultNormalizedCacheFactory(normalizedCache);
+
   try {
-    const queryData = cache.readQuery({
+    const storeReader = cache.storeReader as StoreReader;
+    const queryData = storeReader.readQueryFromStore({
+      store: offlineStore,
       query,
       variables,
     });
@@ -257,7 +281,12 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
   const execute = true;
   const {
     optimisticResponse: originalOptimisticResponse,
-    operation: { variables, query: mutation, context, operationName },
+    operation: {
+      variables: originalVariables,
+      query: mutation,
+      context,
+      operationName,
+    },
     update,
     fetchPolicy,
     observer,
@@ -278,6 +307,11 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       outbox: [, ...enqueuedMutations],
     },
   } = store.getState();
+
+  const variables = {
+    ...replaceUsingMap({ ...originalVariables }, idsMap),
+    // TODO: Add a skip retry?
+  };
 
   const optimisticResponse = replaceUsingMap(
     { ...originalOptimisticResponse },
@@ -349,6 +383,15 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
       next: (data) => {
         boundSaveServerId(store, optimisticResponse, data.data);
 
+        const {
+          [METADATA_KEY]: {
+            idsMap,
+            snapshot: { cache: cacheSnapshot },
+          },
+        } = store.getState();
+
+        client.cache.restore(cacheSnapshot as T);
+
         queryManager.mutationStore.markMutationResult(mutationId);
 
         if (fetchPolicy !== "no-cache") {
@@ -361,6 +404,8 @@ export const offlineEffect = async <T extends NormalizedCacheObject>(
             update: mutationUpdate,
           });
         }
+
+        boundSaveSnapshot(store, client.cache);
 
         updateCacheWithEnqueuedMutationUpdates(
           enqueuedMutations,
@@ -504,9 +549,6 @@ const updateCacheWithEnqueuedMutationUpdates = (
     });
 };
 
-const boundSaveServerId = (store, optimisticResponse, data) =>
-  store.dispatch(saveServerId(optimisticResponse, data));
-
 export const discard = (
   discardCondition: Discard,
   callback: OfflineCallback,
@@ -514,6 +556,20 @@ export const discard = (
   const discardResult = shouldDiscard(error, action, retries, discardCondition);
 
   if (discardResult) {
+    // Call observer
+    // const {
+    //   meta: {
+    //     offline: {
+    //       effect: { observer },
+    //     },
+    //   },
+    // } = action;
+
+    // if (observer && !observer.closed) {
+    //   observer.error(error);
+    // }
+
+    // Call global error callback
     if (typeof callback === "function") {
       tryFunctionOrLogError(() => {
         callback({ error }, null);
@@ -551,105 +607,7 @@ export const offlineEffectConfig = {
   enqueueAction: actions.ENQUEUE,
   effect: offlineEffect,
   discard,
-  reducer: (dataIdFromObject) => (state: OfflineSyncMetadataState, action) => {
-    const { type, payload } = action;
-    switch (type) {
-      case PERSIST_REHYDRATE:
-        const { [METADATA_KEY]: rehydratedState } = payload;
-        return rehydratedState || state;
-      default:
-        const {
-          idsMap: originalIdsMap = {},
-          snapshot: originalSnapshot = {},
-          ...restState
-        } = state || {};
-
-        /// Process the snapshot and ID map for the action
-        const snapshot = snapshotReducer(originalSnapshot, action);
-        const idsMap = idsMapReducer(
-          originalIdsMap,
-          { ...action, remainingMutations: snapshot.enqueuedMutations },
-          dataIdFromObject,
-        );
-
-        return {
-          ...restState,
-          snapshot,
-          idsMap,
-        };
-    }
-  },
+  reducer: offlineEffectReducer,
 };
 
 const enqueuedActionsFilter = [offlineEffectConfig.enqueueAction];
-
-const snapshotReducer = (state, action) => {
-  const enqueuedMutations = enqueuedMutationsReducer(
-    state && state.enqueuedMutations,
-    action,
-  );
-
-  return {
-    enqueuedMutations,
-  };
-};
-
-const enqueuedMutationsReducer = (state = 0, { type }) => {
-  switch (type) {
-    case actions.ENQUEUE:
-      return state + 1;
-    case actions.COMMIT:
-    case actions.ROLLBACK:
-      return state - 1;
-    default:
-      return state;
-  }
-};
-
-const idsMapReducer = (state = {}, action, dataIdFromObject) => {
-  const { type, payload = {} } = action;
-  const { optimisticResponse } = payload;
-
-  switch (type) {
-    case actions.ENQUEUE:
-      const ids = getIds(dataIdFromObject, optimisticResponse);
-      const entries = Object.values(ids).reduce(
-        (map: { [key: string]: string }, id: string) => ((map[id] = null), map),
-        {},
-      );
-      return {
-        ...state,
-        ...entries,
-      };
-    case actions.COMMIT:
-      const { remainingMutations } = action;
-      return remainingMutations ? state : {};
-    case actions.SAVE_SERVER_ID:
-      const { data } = payload;
-      const oldIds = getIds(dataIdFromObject, optimisticResponse);
-      const newIds = getIds(dataIdFromObject, data);
-
-      return {
-        ...state,
-        ...mapIds(oldIds, newIds),
-      };
-    default:
-      return state;
-  }
-};
-
-const intersection = <T>(array1: T[], array2: T[]): T[] =>
-  array1.filter((v) => array2.indexOf(v) !== -1);
-
-const intersectingKeys = (object1: object, object2: object) => {
-  const keys1 = Object.keys(object1);
-  const keys2 = Object.keys(object2);
-
-  return intersection(keys1, keys2);
-};
-
-const mapIds = (object1: object, object2: object) =>
-  intersectingKeys(object1, object2).reduce(
-    (map, key) => ((map[object1[key]] = object2[key]), map),
-    {},
-  );
