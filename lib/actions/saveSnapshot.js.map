@@ -1,1 +1,1 @@
-{"version":3,"file":"saveSnapshot.js","sourceRoot":"","sources":["../../src/actions/saveSnapshot.ts"],"names":[],"mappings":";;AAAa,QAAA,aAAa,GAAG,eAAe,CAAC;AAE7C,kBAAe,CAAC,KAAK,EAAE,EAAE,CAAC,CAAC;IACzB,IAAI,EAAE,qBAAa;IACnB,OAAO,EAAE,EAAE,KAAK,EAAE;CACnB,CAAC,CAAC"}
+{"version":3,"file":"saveSnapshot.js","sourceRoot":"","sources":["../../src/actions/saveSnapshot.ts"],"names":[],"mappings":";;AAGa,QAAA,aAAa,GAAG,eAAe,CAAC;AAE7C,kBAAe,CAAC,KAAyC,EAAE,EAAE,CAAC,CAAC;IAC7D,IAAI,EAAE,qBAAa;IACnB,OAAO,EAAE,EAAE,KAAK,EAAE;CACnB,CAAC,CAAC"}

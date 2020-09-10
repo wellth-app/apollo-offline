@@ -1,5 +1,5 @@
 import { ApolloLink } from "apollo-link";
-import OfflineLink, { OfflineLinkOptions } from "../links/offline";
+import OfflineLink, { OfflineLinkOptions } from "./offline";
 
 export interface CreateNetworkLinkOptions extends OfflineLinkOptions {
   disableOffline: boolean;
@@ -12,7 +12,7 @@ export const createNetworkLink = ({
   onlineLink,
   disableOffline,
   ...offlineLinkOptions
-}: CreateNetworkLinkOptions) =>
+}: CreateNetworkLinkOptions): ApolloLink =>
   ApolloLink.from(
     [
       offlineLink,

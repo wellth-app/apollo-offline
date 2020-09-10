@@ -10,12 +10,9 @@ import { OfflineState } from "@redux-offline/redux-offline/lib/types";
 import { ThunkAction } from "redux-thunk";
 import { rootLogger } from "../utils";
 import { WRITE_CACHE as WRITE_CACHE_ACTION } from "../actions/writeCache";
+import { NORMALIZED_CACHE_KEY, METADATA_KEY } from "./constants";
 
 const logger = rootLogger.extend("offline-cache");
-
-// !!!: Offline schema keys. Do not change in a non-backwards-compatible way
-export const NORMALIZED_CACHE_KEY = "apollo-offline";
-export const METADATA_KEY = "apollo-offline-metadata";
 
 export { defaultDataIdFromObject };
 
@@ -32,15 +29,33 @@ export type OfflineSyncMetadataState = {
   };
 };
 
-export interface OfflineCache {
+export interface OfflineCacheShape {
   offline: OfflineState;
   rehydrated: boolean;
   [NORMALIZED_CACHE_KEY]: NormalizedCacheObject;
   [METADATA_KEY]: OfflineSyncMetadataState;
 }
 
+type OfflineStore = Store<OfflineCacheShape>;
+
+type WriteThunk = (
+  type: string,
+  payload: any,
+) => ThunkAction<Action, OfflineCacheShape, null, AnyAction>;
+
+const writeThunk: WriteThunk = (type, payload) => (dispatch, _getState) =>
+  dispatch({
+    type,
+    payload,
+  });
+
+const boundWriteCache = (store: OfflineStore, data: NormalizedCacheObject) => {
+  logger(`Dispatching ${WRITE_CACHE_ACTION}`);
+  store.dispatch((writeThunk(WRITE_CACHE_ACTION, data) as any) as Action);
+};
+
 export type OfflineCacheOptions = {
-  store: Store<OfflineCache>;
+  store: OfflineStore;
   storeCacheRootMutation?: boolean;
 };
 
@@ -48,13 +63,14 @@ const isOfflineCacheOptions = (obj: any): obj is OfflineCacheOptions =>
   !!(obj as OfflineCacheOptions).store;
 
 /// Class that extends the `apollo-inmemory-cache` to persist to the provided
-/// `redux` store in the shape of `OfflineCache`.
-export default class ApolloOfflineCache extends InMemoryCache {
-  private store: Store<OfflineCache>;
-  private storeCacheRootMutation: boolean = false;
+/// `redux` store in the shape of `OfflineCacheShape`.
+export class ApolloOfflineCache extends InMemoryCache {
+  private store: OfflineStore;
+
+  private storeCacheRootMutation = false;
 
   constructor(
-    optionsOrStore: Store<OfflineCache> | OfflineCacheOptions,
+    optionsOrStore: OfflineStore | OfflineCacheOptions,
     config: ApolloReducerConfig = {},
   ) {
     super(config);
@@ -80,7 +96,7 @@ export default class ApolloOfflineCache extends InMemoryCache {
     });
   }
 
-  restore(data: NormalizedCacheObject) {
+  restore(data: NormalizedCacheObject): this {
     // Write the data to the persistent cache
     boundWriteCache(this.store, data);
 
@@ -91,7 +107,7 @@ export default class ApolloOfflineCache extends InMemoryCache {
     return this;
   }
 
-  write(write: Cache.WriteOptions) {
+  write(write: Cache.WriteOptions): void {
     super.write(write);
 
     /// Delete the `ROOT_MUTATION` key from data if it was written
@@ -110,13 +126,13 @@ export default class ApolloOfflineCache extends InMemoryCache {
     }
   }
 
-  reset() {
+  reset(): Promise<void> {
     logger("Resetting cache");
     boundWriteCache(this.store, {});
     return super.reset();
   }
 
-  getIdsMap() {
+  getIdsMap(): { [key: string]: string } {
     const {
       [METADATA_KEY]: { idsMap },
     } = this.store.getState();
@@ -125,21 +141,4 @@ export default class ApolloOfflineCache extends InMemoryCache {
   }
 }
 
-const boundWriteCache = (
-  store: Store<OfflineCache>,
-  data: NormalizedCacheObject,
-) => {
-  logger(`Dispatching ${WRITE_CACHE_ACTION}`);
-  store.dispatch((writeThunk(WRITE_CACHE_ACTION, data) as any) as Action);
-};
-
-type WriteThunk = (
-  type: string,
-  payload: any,
-) => ThunkAction<Action, OfflineCache, null, AnyAction>;
-
-const writeThunk: WriteThunk = (type, payload) => (dispatch, _getState) =>
-  dispatch({
-    type,
-    payload,
-  });
+export default ApolloOfflineCache;

@@ -1,2 +1,5 @@
-export declare const getIds: (dataIdFromObject: any, obj: any, path?: string, acc?: {}) => any;
+import { IdGetter } from "apollo-cache-inmemory";
+export declare const getIds: (dataIdFromObject: IdGetter, obj: any, path?: string, acc?: {}) => {
+    [key: string]: string;
+};
 export default getIds;

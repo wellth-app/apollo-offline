@@ -3,25 +3,46 @@ import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { SAVE_SERVER_ID } from "../actions/saveServerId";
 import { getIds, mapIds } from "../utils";
 
-export const idsMapReducer = (state = {}, action, dataIdFromObject) => {
+type IdsMapState = { [key: string]: string };
+
+export const idsMap = (
+  state: IdsMapState = {},
+  action,
+  dataIdFromObject,
+): IdsMapState => {
   const { type, payload = {} } = action;
   const { optimisticResponse } = payload;
 
   switch (type) {
-    case QUEUE_OPERATION:
+    case QUEUE_OPERATION: {
       const ids = getIds(dataIdFromObject, optimisticResponse);
-      const entries = Object.values(ids).reduce(
-        (map: { [key: string]: string }, id: string) => ((map[id] = null), map),
+
+      const entries: { [key: string]: string } = Object.values(ids).reduce(
+        (
+          map: { [key: string]: string },
+          id: string,
+        ): { [key: string]: string } => {
+          return {
+            ...map,
+            [id]: null,
+          };
+        },
         {},
       );
+      // const entries = Object.values(ids).reduce(
+      //   (map: { [key: string]: string }, id: string) => ((map[id] = null), map),
+      //   {},
+      // );
       return {
         ...state,
         ...entries,
       };
-    case QUEUE_OPERATION_COMMIT:
+    }
+    case QUEUE_OPERATION_COMMIT: {
       const { remainingMutations } = action;
       return remainingMutations ? state : {};
-    case SAVE_SERVER_ID:
+    }
+    case SAVE_SERVER_ID: {
       const { data } = payload;
       const oldIds = getIds(dataIdFromObject, optimisticResponse);
       const newIds = getIds(dataIdFromObject, data);
@@ -30,9 +51,10 @@ export const idsMapReducer = (state = {}, action, dataIdFromObject) => {
         ...state,
         ...mapIds(oldIds, newIds),
       };
+    }
     default:
       return state;
   }
 };
 
-export default idsMapReducer;
+export default idsMap;
