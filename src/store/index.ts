@@ -16,12 +16,12 @@ import { offline } from "@redux-offline/redux-offline";
 import defaultOfflineConfig from "@redux-offline/redux-offline/lib/defaults";
 import { Config } from "@redux-offline/redux-offline/lib/types";
 import thunk from "redux-thunk";
-import { OfflineCacheShape, OfflineSyncMetadataState } from "cache";
-import rehydrated from "reducers/rehydrated";
-import cacheReducer from "reducers/cache";
-import offlineEffectReducer from "reducers/offlineEffect";
-import { NORMALIZED_CACHE_KEY, METADATA_KEY } from "cache/constants";
 import { IdGetter } from "apollo-cache-inmemory";
+import { OfflineCacheShape, OfflineSyncMetadataState } from "../cache";
+import rehydrated from "../reducers/rehydrated";
+import cacheReducer from "../reducers/cache";
+import offlineEffectReducer from "../reducers/offlineEffect";
+import { NORMALIZED_CACHE_KEY, METADATA_KEY } from "../cache/constants";
 import { rootLogger } from "../utils";
 
 const logger = rootLogger.extend("store");

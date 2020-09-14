@@ -1,5 +1,5 @@
 import { Config, OfflineAction } from "@redux-offline/redux-offline/lib/types";
-import { tryFunctionOrLogError } from "apollo-client/node_modules/apollo-link/node_modules/apollo-utilities";
+import { tryFunctionOrLogError } from "apollo-utilities";
 import { rootLogger } from "../utils";
 
 const logger = rootLogger.extend("discard-effect");

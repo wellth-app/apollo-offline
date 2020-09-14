@@ -1,7 +1,7 @@
 import { Middleware, Store } from "redux";
 import { Config } from "@redux-offline/redux-offline/lib/types";
-import { OfflineCacheShape } from "cache";
 import { IdGetter } from "apollo-cache-inmemory";
+import { OfflineCacheShape } from "../cache";
 export interface ReducerOptions {
     dataIdFromObject: IdGetter;
 }

@@ -1,27 +1,26 @@
 /* eslint-disable no-shadow */
 import { Store } from "redux";
-import { OfflineCacheShape } from "cache";
-import { METADATA_KEY } from "cache/constants";
 import { MutationUpdaterFn, ApolloError } from "apollo-client";
 import { Observable, FetchResult } from "apollo-link";
-import { tryFunctionOrLogError } from "apollo-client/node_modules/apollo-link/node_modules/apollo-utilities";
+import { tryFunctionOrLogError } from "apollo-utilities";
+import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
+import { NormalizedCacheObject } from "apollo-cache-inmemory";
 import {
   EnqueuedMutationEffect,
   boundSaveSnapshot,
   CacheUpdates,
-} from "links/offline";
+} from "../links/offline";
+import { METADATA_KEY } from "../cache/constants";
+import { OfflineCacheShape } from "../cache";
 import {
   replaceUsingMap,
   getOperationFieldName,
   IS_OPTIMISTIC_KEY,
-} from "utils";
-import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
-import { NormalizedCacheObject } from "apollo-cache-inmemory";
-
+  rootLogger,
+} from "../utils";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import saveServerId from "../actions/saveServerId";
 import { ApolloOfflineClient, OfflineCallback } from "../client";
-import { rootLogger } from "../utils";
 
 const logger = rootLogger.extend("offline-effect");
 
