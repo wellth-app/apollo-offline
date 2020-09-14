@@ -29,6 +29,7 @@ export default class ApolloOfflineClient extends ApolloClient<NormalizedCacheObj
     hydrated(): Promise<ApolloOfflineClient>;
     constructor({ disableOffline, reduxMiddleware, offlineLink, onlineLink, cacheOptions, mutationCacheUpdates, offlineConfig: { discardCondition, callback: offlineCallback, storage, storeCacheRootMutation, }, }: ApolloOfflineClientOptions, { cache: customCache, link: customLink, ...clientOptions }?: Partial<ApolloClientOptions<NormalizedCacheObject>>);
     isOfflineEnabled(): boolean;
+    networkConnected(): boolean;
     reset(): Promise<void>;
     mutate<TData, TVariables = OperationVariables>(options: MutationOptions<TData, TVariables>): Promise<FetchResult<TData>>;
 }

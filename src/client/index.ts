@@ -177,6 +177,10 @@ export default class ApolloOfflineClient extends ApolloClient<
     return !this.disableOffline;
   }
 
+  networkConnected(): boolean {
+    return this.reduxStore.getState().offline.online;
+  }
+
   async reset(): Promise<void> {
     logger("Resetting client store and cache");
     this.reduxStore.dispatch(resetState);
