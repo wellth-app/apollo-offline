@@ -26,6 +26,7 @@ import {
 import { Store as ReduxStore } from "redux";
 import { FieldNode } from "graphql";
 import { ApolloCache } from "apollo-cache";
+import * as uuid from "uuid";
 import { IS_OPTIMISTIC_KEY } from "../utils/isOptimistic";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
@@ -76,6 +77,7 @@ export type EnqueuedMutationEffect<T> = {
     | RefetchQueryDescription;
   observer: ZenObservable.SubscriptionObserver<T>;
   fetchPolicy?: FetchPolicy;
+  attemptId: string;
 };
 
 export interface OfflineLinkOptions {
@@ -221,6 +223,7 @@ export default class OfflineLink extends ApolloLink {
         refetchQueries,
         fetchPolicy,
         observer,
+        attemptId: uuid.v4(),
       };
 
       this.store.dispatch({

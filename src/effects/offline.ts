@@ -52,6 +52,7 @@ export const offlineEffect = async (
     },
     update,
     fetchPolicy,
+    attemptId,
     observer,
   } = effect;
 
@@ -62,13 +63,10 @@ export const offlineEffect = async (
   }
 
   const { queryManager } = client;
-  const { dataStore, mutationStore } = client.queryManager;
-
-  console.log(mutationStore.getStore());
+  const { dataStore } = client.queryManager;
 
   const {
     [METADATA_KEY]: { idsMap },
-    offline: { outbox: enqueuedMutations },
   } = store.getState();
 
   const variables = {
@@ -122,13 +120,16 @@ export const offlineEffect = async (
             idsMap: newIdsMap,
             snapshot: { cache: cacheSnapshot },
           },
+          offline: {
+            outbox: [, ...enqueuedMutations],
+          },
         } = store.getState();
 
         client.cache.restore(cacheSnapshot);
 
         if (fetchPolicy !== "no-cache") {
           dataStore.markMutationResult({
-            mutationId: null,
+            mutationId: attemptId,
             result: data,
             document: mutation,
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -161,6 +162,7 @@ export const offlineEffect = async (
                 update,
                 optimisticResponse: originalOptimisticResponse,
                 fetchPolicy,
+                attemptId: enqueuedAttemptId,
               } = effect as EnqueuedMutationEffect<any>;
 
               let enqueuedMutationUpdate:
@@ -182,22 +184,22 @@ export const offlineEffect = async (
                 return;
               }
 
-              const result = {
-                data: replaceUsingMap(
-                  { ...originalOptimisticResponse },
-                  newIdsMap,
-                ),
-              };
+              const enqueuedOptimisticResponse = replaceUsingMap(
+                { ...originalOptimisticResponse },
+                newIdsMap,
+              );
+
+              const result = { data: enqueuedOptimisticResponse };
 
               if (fetchPolicy !== "no-cache") {
                 logger("Running update function for mutation", {
+                  operationName,
                   document,
                   variables,
-                  operationName,
                 });
 
                 client.queryManager.dataStore.markMutationResult({
-                  mutationId: null,
+                  mutationId: enqueuedAttemptId,
                   result,
                   document,
                   variables,
@@ -214,8 +216,7 @@ export const offlineEffect = async (
         // Resolve the promise with the query data
         resolve({ data });
 
-        // If there's an observer, notify the observer that the response
-        // is complete
+        // If there's an observer, notify the it with the response
         if (observer.next && !observer.closed) {
           observer.next({ ...data, [IS_OPTIMISTIC_KEY]: false });
           observer.complete();
@@ -265,10 +266,12 @@ export const offlineEffect = async (
         }
       },
       error: (error) => {
+        // TODO: Mark the mutation for attempt id as failed
         queryManager.broadcastQueries();
         logger("Error executing link:", error);
         reject(error);
       },
+      // TODO: Add a completed handler to mark the mutation as finished
     });
   });
 };

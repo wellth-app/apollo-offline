@@ -21,6 +21,7 @@ import {
   ApolloReducerConfig,
   defaultDataIdFromObject,
 } from "apollo-cache-inmemory";
+import { persistenceLoadedEffect } from "../effects/persistenceLoaded";
 import { CacheUpdates } from "../links/offline";
 import { offlineEffect } from "../effects/offline";
 import { discard, Discard } from "../effects/discard";
@@ -114,7 +115,10 @@ export default class ApolloOfflineClient extends ApolloClient<
           storage,
           dataIdFromObject,
           middleware: reduxMiddleware,
-          persistCallback: () => resolveClient(this),
+          persistCallback: () => {
+            persistenceLoadedEffect(store, this, mutationCacheUpdates);
+            resolveClient(this);
+          },
           effect: (effect, action) =>
             offlineEffect(
               store,
