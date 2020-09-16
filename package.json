@@ -13,7 +13,7 @@
     "url": "git+https://github.com/wellth-app/apollo-offline.git"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "build:watch": "tsc -w",
     "clean": "rimraf lib/",
     "lint": "eslint ./src/**/*.ts",
