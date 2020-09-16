@@ -1,5 +1,6 @@
 import { Config, OfflineAction } from "@redux-offline/redux-offline/lib/types";
 import { tryFunctionOrLogError } from "apollo-utilities";
+import { EnqueuedMutationEffect } from "../links/offline";
 import { rootLogger } from "../utils";
 
 const logger = rootLogger.extend("discard-effect");
@@ -44,17 +45,16 @@ export const discard = (
 
   if (discardResult) {
     // Call observer
-    // const {
-    //   meta: {
-    //     offline: {
-    //       effect: { observer },
-    //     },
-    //   },
-    // } = action;
+    const {
+      meta: {
+        offline: { effect },
+      },
+    } = action;
+    const { observer } = effect as EnqueuedMutationEffect<any>;
 
-    // if (observer && !observer.closed) {
-    //   observer.error(error);
-    // }
+    if (observer && !observer.closed) {
+      observer.error(error);
+    }
 
     // Call global error callback
     if (typeof callback === "function") {
