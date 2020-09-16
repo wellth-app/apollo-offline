@@ -1,3 +1,6 @@
+/* eslint-disable no-underscore-dangle */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   createStore,
   applyMiddleware,
@@ -5,28 +8,28 @@ import {
   combineReducers,
   Middleware,
   Store,
+  AnyAction,
+  StoreEnhancerStoreCreator,
 } from "redux";
 import { offline } from "@redux-offline/redux-offline";
 import defaultOfflineConfig from "@redux-offline/redux-offline/lib/defaults";
-import { OfflineAction, Config } from "@redux-offline/redux-offline/lib/types";
+import { Config } from "@redux-offline/redux-offline/lib/types";
 import thunk from "redux-thunk";
-import reducers from "../reducers";
+import { IdGetter } from "apollo-cache-inmemory";
+import { OfflineCacheShape, OfflineSyncMetadataState } from "../cache";
+import rehydrated from "../reducers/rehydrated";
+import cacheReducer from "../reducers/cache";
+import offlineEffectReducer from "../reducers/offlineEffect";
+import { NORMALIZED_CACHE_KEY, METADATA_KEY } from "../cache/constants";
 import { rootLogger } from "../utils";
 
 const logger = rootLogger.extend("store");
 
-export type NetworkEffect = (
-  effect: any,
-  action: OfflineAction,
-) => Promise<any>;
+export interface ReducerOptions {
+  dataIdFromObject: IdGetter;
+}
 
-export type Discard = (
-  error: any,
-  action: OfflineAction,
-  retries: number,
-) => boolean;
-
-export interface Options extends Partial<Config> {
+export interface OfflineStoreOptions extends Partial<Config> {
   // Middleware to be applied to the redux store.
   middleware: Middleware[];
   /// TODO: Figure out wtf AsyncStorage conforms to and do that
@@ -40,14 +43,20 @@ export const createOfflineStore = ({
   storage = undefined,
   dataIdFromObject,
   ...offlineConfig
-}: Options): Store<any> => {
+}: OfflineStoreOptions): Store<OfflineCacheShape> => {
   logger("Creating offline store");
-  return createStore(
-    combineReducers(reducers({ dataIdFromObject })),
+
+  const store = createStore<OfflineCacheShape>(
+    combineReducers({
+      rehydrated,
+      [NORMALIZED_CACHE_KEY]: cacheReducer,
+      [METADATA_KEY]: (state: OfflineSyncMetadataState, action: AnyAction) =>
+        offlineEffectReducer(dataIdFromObject)(state, action),
+    }),
     typeof window !== "undefined" &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__ &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__(),
-    compose(
+    compose<StoreEnhancerStoreCreator<OfflineCacheShape>>(
       applyMiddleware(thunk, ...middleware),
       offline({
         ...defaultOfflineConfig,
@@ -57,11 +66,12 @@ export const createOfflineStore = ({
           persistCallback();
         },
         persistOptions: {
-          blacklist: ["rehydrated"],
-          whitelist: ["offline"],
-          storage,
+          ...(storage && { storage }),
+          whitelist: ["offline", NORMALIZED_CACHE_KEY, METADATA_KEY],
         },
       }),
     ),
   );
+
+  return store;
 };

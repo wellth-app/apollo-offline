@@ -2,35 +2,37 @@ import { Cache } from "apollo-cache";
 import { Store } from "redux";
 import { InMemoryCache, ApolloReducerConfig, defaultDataIdFromObject, NormalizedCacheObject } from "apollo-cache-inmemory";
 import { OfflineState } from "@redux-offline/redux-offline/lib/types";
-export declare const NORMALIZED_CACHE_KEY = "apollo-offline";
-export declare const METADATA_KEY = "apollo-offline-metadata";
+import { NORMALIZED_CACHE_KEY, METADATA_KEY } from "./constants";
 export { defaultDataIdFromObject };
 export declare type OfflineSyncMetadataState = {
     idsMap: {
         [key: string]: string;
     };
     snapshot: {
+        cache: NormalizedCacheObject;
         enqueuedMutations: number;
     };
 };
-export interface OfflineCache {
+export interface OfflineCacheShape {
     offline: OfflineState;
     rehydrated: boolean;
     [NORMALIZED_CACHE_KEY]: NormalizedCacheObject;
     [METADATA_KEY]: OfflineSyncMetadataState;
 }
+declare type OfflineStore = Store<OfflineCacheShape>;
 export declare type OfflineCacheOptions = {
-    store: Store<OfflineCache>;
+    store: OfflineStore;
     storeCacheRootMutation?: boolean;
 };
-export default class ApolloOfflineCache extends InMemoryCache {
+export declare class ApolloOfflineCache extends InMemoryCache {
     private store;
     private storeCacheRootMutation;
-    constructor(optionsOrStore: Store<OfflineCache> | OfflineCacheOptions, config?: ApolloReducerConfig);
+    constructor(optionsOrStore: OfflineStore | OfflineCacheOptions, config?: ApolloReducerConfig);
     restore(data: NormalizedCacheObject): this;
     write(write: Cache.WriteOptions): void;
     reset(): Promise<void>;
     getIdsMap(): {
-        [x: string]: string;
+        [key: string]: string;
     };
 }
+export default ApolloOfflineCache;

@@ -1,42 +1,67 @@
 module.exports = {
-  parser: "typescript-eslint-parser",
-  plugins: ["typescript", "prettier"],
-  extends: ["prettier"],
+  plugins: [
+    "prettier",
+    "jest",
+    "@typescript-eslint"
+  ],
+
+  extends: [
+    "eslint:recommended",
+    "airbnb-base",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
+    "plugin:import/typescript",
+    "plugin:prettier/recommended",
+    "prettier",
+    "prettier/@typescript-eslint"
+  ],
+
+  parser: "@typescript-eslint/parser",
+
   parserOptions: {
-    ecmaVersion: 6,
+    ecmaVersion: "es6",
+    tsconfigRootDir: __dirname,
+    project: "tsconfig.json"
   },
+
   env: {
     es6: true,
     node: true,
   },
-  overrides: {
-    files: "src/**/*.ts",
-  },
+
+  ignorePatterns: [
+    ".eslintrc.js"
+  ],
+
   rules: {
-    // Error on console statements
+    "import/extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "js": "never",
+        "jsx": "never",
+        "ts": "never",
+        "tsx": "never"
+      }
+    ],
     "no-console": 2,
-    // No duplicate cases in switch statements
-    "no-duplicate-case": 2,
-    // No weird whitespace (should be covered by prettier, but called out)
-    "no-irregular-whitespace": 2,
-    // No template strings within '' or ""
-    "no-template-curly-in-string": 2,
-    // No weird multiline formatting
-    "no-unexpected-multiline": 2,
-    // No unreachable code
-    "no-unreachable": 2,
-    // Error for unused vars or imports
-    "no-unused-vars": 1,
-    // Warn when re-assigning function parameters
-    "no-param-reassign": 1,
-    // Warn for "yoda" cases i.e. (-1 < someVariable)
-    yoda: 1,
-    // Warn for magic numbers
-    "no-magic-numbers": 1,
-    // Warn inner declarations
-    "no-inner-declarations": 1,
-    // Warn if no default case
-    "default-case": 1,
-    "prettier/prettier": 2,
+    "quotes": ["error", "double", { "avoidEscape": true }],
+
+    "@typescript-eslint/no-unsafe-call": 1,
+    "@typescript-eslint/no-unsafe-assignment": 1,
+    "@typescript-eslint/no-unsafe-member-access": 1,
   },
+
+  settings: {
+    "import/parsers": {
+      "@typescript-eslint/parser": [".ts", ".tsx"]
+    },
+    "import/resolver": {
+      "node": {
+        "paths": ["src"],
+        "extensions": [".ts", ".tsx"]
+      }
+    }
+  }
 };

@@ -21,16 +21,16 @@ import {
   ApolloReducerConfig,
   defaultDataIdFromObject,
 } from "apollo-cache-inmemory";
-import { offlineEffect, discard, CacheUpdates } from "../links/offline";
+import { persistenceLoadedEffect } from "../effects/persistenceLoaded";
+import { CacheUpdates } from "../links/offline";
+import { offlineEffect } from "../effects/offline";
+import { discard, Discard } from "../effects/discard";
 import passthroughLink from "../links/passthrough";
 import { createNetworkLink } from "../links/createNetworkLink";
 import resetState from "../actions/resetState";
-import { createOfflineStore, Discard } from "../store";
+import { createOfflineStore } from "../store";
 import { rootLogger } from "../utils";
-import {
-  default as OfflineCache,
-  OfflineCache as OfflineCacheType,
-} from "../cache";
+import OfflineCache, { OfflineCacheShape as OfflineCacheType } from "../cache";
 
 const logger = rootLogger.extend("client");
 
@@ -62,16 +62,19 @@ export interface ApolloOfflineClientOptions {
   mutationCacheUpdates?: CacheUpdates;
 }
 
-export default class ApolloOfflineClient<
-  T extends NormalizedCacheObject
-> extends ApolloClient<T> {
+export default class ApolloOfflineClient extends ApolloClient<
+  NormalizedCacheObject
+> {
   public mutationCacheUpdates: CacheUpdates;
-  private _store: Store<OfflineCacheType>;
-  // Resolves when `@redux-offline` rehydrates
-  private hydratedPromise: Promise<ApolloOfflineClient<T>>;
-  private _disableOffline: boolean;
 
-  hydrated() {
+  private reduxStore: Store<OfflineCacheType>;
+
+  // Resolves when `@redux-offline` rehydrates
+  private hydratedPromise: Promise<ApolloOfflineClient>;
+
+  private disableOffline: boolean;
+
+  hydrated(): Promise<ApolloOfflineClient> {
     return this.hydratedPromise;
   }
 
@@ -94,10 +97,10 @@ export default class ApolloOfflineClient<
       cache: customCache = undefined,
       link: customLink = undefined,
       ...clientOptions
-    }: Partial<ApolloClientOptions<T>> = {},
+    }: Partial<ApolloClientOptions<NormalizedCacheObject>> = {},
   ) {
     let resolveClient: (
-      client: ApolloOfflineClient<T> | PromiseLike<ApolloOfflineClient<T>>,
+      client: ApolloOfflineClient | PromiseLike<ApolloOfflineClient>,
     ) => void;
 
     // ???: Should we fail if no `onlineLink` is provided?
@@ -106,13 +109,16 @@ export default class ApolloOfflineClient<
     const dataIdFromObject = disableOffline
       ? () => null
       : cacheOptions.dataIdFromObject || defaultDataIdFromObject;
-    const store = disableOffline
+    const store: Store<OfflineCacheType> = disableOffline
       ? null
       : createOfflineStore({
           storage,
           dataIdFromObject,
           middleware: reduxMiddleware,
-          persistCallback: () => resolveClient(this),
+          persistCallback: () => {
+            persistenceLoadedEffect(store, this, mutationCacheUpdates);
+            resolveClient(this);
+          },
           effect: (effect, action) =>
             offlineEffect(
               store,
@@ -122,10 +128,12 @@ export default class ApolloOfflineClient<
               offlineCallback,
               mutationCacheUpdates,
             ),
-          discard: discard(discardCondition, offlineCallback),
+          discard: discard(discardCondition, (error) =>
+            offlineCallback(error, null),
+          ),
         });
 
-    const cache: ApolloCache<any> = disableOffline
+    const cache: ApolloCache<NormalizedCacheObject> = disableOffline
       ? customCache || new InMemoryCache(cacheOptions)
       : new OfflineCache({ store, storeCacheRootMutation }, cacheOptions);
 
@@ -140,18 +148,17 @@ export default class ApolloOfflineClient<
             .then(() => {
               handle = passthroughLink(operation, forward).subscribe(observer);
             })
-            .catch(observer.error);
+            .catch(observer.error.bind(observer));
 
           return () => {
             if (handle) {
-              handle.unsubscribe;
+              handle.unsubscribe();
             }
           };
         });
       }),
-      !!customLink
-        ? customLink
-        : createNetworkLink({ store, disableOffline, offlineLink, onlineLink }),
+      customLink ||
+        createNetworkLink({ store, disableOffline, offlineLink, onlineLink }),
     ]);
 
     super({
@@ -161,8 +168,8 @@ export default class ApolloOfflineClient<
     });
 
     this.mutationCacheUpdates = mutationCacheUpdates;
-    this._store = store;
-    this._disableOffline = disableOffline;
+    this.reduxStore = store;
+    this.disableOffline = disableOffline;
     this.hydratedPromise = disableOffline
       ? Promise.resolve(this)
       : new Promise((resolve) => {
@@ -170,20 +177,24 @@ export default class ApolloOfflineClient<
         });
   }
 
-  isOfflineEnabled() {
-    return !this._disableOffline;
+  isOfflineEnabled(): boolean {
+    return !this.disableOffline;
   }
 
-  async reset() {
+  networkConnected(): boolean {
+    return this.reduxStore.getState().offline.online;
+  }
+
+  async reset(): Promise<void> {
     logger("Resetting client store and cache");
-    this._store.dispatch(resetState);
+    this.reduxStore.dispatch(resetState);
     await this.cache.reset();
     await this.resetStore();
   }
 
-  mutate<T, TVariables = OperationVariables>(
-    options: MutationOptions<T, TVariables>,
-  ): Promise<FetchResult<T>> {
+  mutate<TData, TVariables = OperationVariables>(
+    options: MutationOptions<TData, TVariables>,
+  ): Promise<FetchResult<TData>> {
     if (!this.isOfflineEnabled()) {
       return super.mutate(options);
     }
@@ -191,15 +202,14 @@ export default class ApolloOfflineClient<
     const execute = false;
     const {
       optimisticResponse,
-      context: originalContext = {},
+      context: originalContext,
       update,
       fetchPolicy,
       ...otherOptions
     } = options;
 
     const operationName = getOperationName(options.mutation);
-
-    let mutationUpdate: MutationUpdaterFn<T> | undefined = update;
+    let mutationUpdate: MutationUpdaterFn<TData> | undefined = update;
     if (!mutationUpdate && this.mutationCacheUpdates[operationName]) {
       const contextUpdate = this.mutationCacheUpdates[operationName];
       mutationUpdate = contextUpdate(originalContext);

@@ -1,4 +1,6 @@
-import { NextLink, Operation, Observable } from "apollo-link";
+import { NextLink, Operation, Observable, FetchResult } from "apollo-link";
 
-export default (operation: Operation, forward: NextLink) =>
-  !!forward ? forward(operation) : Observable.of();
+export default (
+  operation: Operation,
+  forward: NextLink,
+): Observable<FetchResult> => (forward ? forward(operation) : Observable.of());
