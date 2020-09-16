@@ -8,7 +8,6 @@ import {
   combineReducers,
   Middleware,
   Store,
-  ReducersMapObject,
   AnyAction,
   StoreEnhancerStoreCreator,
 } from "redux";
@@ -29,14 +28,6 @@ const logger = rootLogger.extend("store");
 export interface ReducerOptions {
   dataIdFromObject: IdGetter;
 }
-
-const reducer: (options: ReducerOptions) => ReducersMapObject = ({
-  dataIdFromObject,
-}) => ({
-  [METADATA_KEY]: (state: OfflineSyncMetadataState, action: AnyAction) => {
-    return offlineEffectReducer(dataIdFromObject)(state, action);
-  },
-});
 
 export interface OfflineStoreOptions extends Partial<Config> {
   // Middleware to be applied to the redux store.
@@ -59,7 +50,8 @@ export const createOfflineStore = ({
     combineReducers({
       rehydrated,
       [NORMALIZED_CACHE_KEY]: cacheReducer,
-      ...reducer({ dataIdFromObject }),
+      [METADATA_KEY]: (state: OfflineSyncMetadataState, action: AnyAction) =>
+        offlineEffectReducer(dataIdFromObject)(state, action),
     }),
     typeof window !== "undefined" &&
       (window as any).__REDUX_DEVTOOLS_EXTENSION__ &&

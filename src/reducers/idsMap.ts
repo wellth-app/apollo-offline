@@ -29,10 +29,6 @@ export const idsMap = (
         },
         {},
       );
-      // const entries = Object.values(ids).reduce(
-      //   (map: { [key: string]: string }, id: string) => ((map[id] = null), map),
-      //   {},
-      // );
       return {
         ...state,
         ...entries,

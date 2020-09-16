@@ -118,6 +118,7 @@ export class ApolloOfflineCache extends InMemoryCache {
       this.data.delete(ROOT_MUTATION_DATA_ID);
     }
 
+    // Don't save optimistics/record transactions to the persisted cache
     if (this.data && typeof (this.data as any).record === "undefined") {
       const data = super.extract(true);
       boundWriteCache(this.store, data);
