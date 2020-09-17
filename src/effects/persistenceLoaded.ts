@@ -1,7 +1,8 @@
 import { MutationUpdaterFn } from "apollo-client";
 import { Store } from "redux";
+import { METADATA_KEY } from "cache/constants";
 import { EnqueuedMutationEffect } from "../links/offline";
-import { rootLogger } from "../utils";
+import { rootLogger, replaceUsingMap } from "../utils";
 import { OfflineCacheShape } from "../cache";
 import { ApolloOfflineClient, CacheUpdates } from "../client";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
@@ -16,6 +17,7 @@ export const persistenceLoadedEffect = (
 ): void => {
   const {
     offline: { outbox: enqueuedMutations },
+    [METADATA_KEY]: { idsMap },
   } = store.getState();
 
   if (!client.queryManager) {
@@ -23,7 +25,6 @@ export const persistenceLoadedEffect = (
   }
 
   const { queryManager } = client;
-  const { mutationStore } = queryManager;
 
   enqueuedMutations
     .filter(({ type }) => [QUEUE_OPERATION].indexOf(type) > -1)
@@ -40,11 +41,20 @@ export const persistenceLoadedEffect = (
             context,
             operationName,
           },
-          optimisticResponse,
+          optimisticResponse: originalOptimisticResponse,
           update,
           fetchPolicy,
           attemptId,
         } = effect as EnqueuedMutationEffect<any>;
+
+        // Look up the mutation update function in `mutationCacheUpdates`
+        // and mark the mutation as initialized to trigger updates
+        // with optimistic responses
+        let mutationUpdate: MutationUpdaterFn | undefined = update;
+        if (!mutationUpdate && mutationCacheUpdates[operationName]) {
+          const contextUpdate = mutationCacheUpdates[operationName];
+          mutationUpdate = contextUpdate(context);
+        }
 
         if (fetchPolicy === "no-cache") {
           return;
@@ -56,23 +66,20 @@ export const persistenceLoadedEffect = (
           variables,
         });
 
-        // Look up the mutation update function in `mutationCacheUpdates`
-        // and mark the mutation as initialized to trigger updates
-        // with optimistic responses
-        let mutationUpdate: MutationUpdaterFn | undefined = update;
-        if (!mutationUpdate && mutationCacheUpdates[operationName]) {
-          const contextUpdate = mutationCacheUpdates[operationName];
-          mutationUpdate = contextUpdate(context);
-        }
+        const optimisticResponse = replaceUsingMap(
+          { ...originalOptimisticResponse },
+          idsMap,
+        );
 
-        mutationStore.initMutation(attemptId, document, variables);
-        queryManager.dataStore.markMutationInit({
+        const result = { data: optimisticResponse };
+
+        queryManager.dataStore.markMutationResult({
           mutationId: attemptId,
+          result,
           document,
           variables,
           updateQueries: {},
           update: mutationUpdate,
-          optimisticResponse,
         });
       },
     );
