@@ -11,6 +11,7 @@ export interface OfflineConfig {
     callback?: OfflineCallback;
     storage?: any;
     storeCacheRootMutation?: boolean;
+    runPersistenceLoadedEffect?: boolean;
 }
 export interface ApolloOfflineClientOptions {
     disableOffline?: boolean;
@@ -26,8 +27,8 @@ export default class ApolloOfflineClient extends ApolloClient<NormalizedCacheObj
     private reduxStore;
     private hydratedPromise;
     private disableOffline;
+    constructor({ disableOffline, reduxMiddleware, offlineLink, onlineLink, cacheOptions, mutationCacheUpdates, offlineConfig: { discardCondition, callback: offlineCallback, storage, storeCacheRootMutation, runPersistenceLoadedEffect, }, }: ApolloOfflineClientOptions, { cache: customCache, link: customLink, ...clientOptions }?: Partial<ApolloClientOptions<NormalizedCacheObject>>);
     hydrated(): Promise<ApolloOfflineClient>;
-    constructor({ disableOffline, reduxMiddleware, offlineLink, onlineLink, cacheOptions, mutationCacheUpdates, offlineConfig: { discardCondition, callback: offlineCallback, storage, storeCacheRootMutation, }, }: ApolloOfflineClientOptions, { cache: customCache, link: customLink, ...clientOptions }?: Partial<ApolloClientOptions<NormalizedCacheObject>>);
     isOfflineEnabled(): boolean;
     networkConnected(): boolean;
     reset(): Promise<void>;
