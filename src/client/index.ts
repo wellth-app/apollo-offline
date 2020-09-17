@@ -45,6 +45,8 @@ export interface OfflineConfig {
   storage?: any;
   // Whether or not to store the root mutation in the cache (default false).
   storeCacheRootMutation?: boolean;
+  // Whether or not to run persistence loaded effect when persistence loads (default false).
+  runPersistenceLoadedEffect?: boolean;
 }
 
 export interface ApolloOfflineClientOptions {
@@ -74,10 +76,6 @@ export default class ApolloOfflineClient extends ApolloClient<
 
   private disableOffline: boolean;
 
-  hydrated(): Promise<ApolloOfflineClient> {
-    return this.hydratedPromise;
-  }
-
   constructor(
     {
       disableOffline = false,
@@ -91,6 +89,7 @@ export default class ApolloOfflineClient extends ApolloClient<
         callback: offlineCallback = undefined,
         storage = undefined,
         storeCacheRootMutation = false,
+        runPersistenceLoadedEffect = false,
       },
     }: ApolloOfflineClientOptions,
     {
@@ -116,7 +115,10 @@ export default class ApolloOfflineClient extends ApolloClient<
           dataIdFromObject,
           middleware: reduxMiddleware,
           persistCallback: () => {
-            persistenceLoadedEffect(store, this, mutationCacheUpdates);
+            if (runPersistenceLoadedEffect) {
+              persistenceLoadedEffect(store, this, mutationCacheUpdates);
+            }
+
             resolveClient(this);
           },
           effect: (effect, action) =>
@@ -175,6 +177,10 @@ export default class ApolloOfflineClient extends ApolloClient<
       : new Promise((resolve) => {
           resolveClient = resolve;
         });
+  }
+
+  hydrated(): Promise<ApolloOfflineClient> {
+    return this.hydratedPromise;
   }
 
   isOfflineEnabled(): boolean {

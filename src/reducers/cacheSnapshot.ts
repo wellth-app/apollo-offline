@@ -1,6 +1,9 @@
 import { SAVE_SNAPSHOT } from "../actions/saveSnapshot";
+import { RESET_STATE } from "../actions/resetState";
 
-export const cacheSnapshot = (state = {}, action) => {
+const InitialState = {};
+
+export const cacheSnapshot = (state = InitialState, action) => {
   const { type, payload } = action;
 
   switch (type) {
@@ -9,6 +12,8 @@ export const cacheSnapshot = (state = {}, action) => {
       const cacheContents = { ...cache.extract(false) };
       return cacheContents;
     }
+    case RESET_STATE:
+      return InitialState;
     default:
       return state;
   }

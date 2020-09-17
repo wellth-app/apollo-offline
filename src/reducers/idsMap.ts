@@ -1,12 +1,14 @@
+import { RESET_STATE } from "actions/resetState";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { SAVE_SERVER_ID } from "../actions/saveServerId";
 import { getIds, mapIds } from "../utils";
 
 type IdsMapState = { [key: string]: string };
+const InitialState = {};
 
 export const idsMap = (
-  state: IdsMapState = {},
+  state: IdsMapState = InitialState,
   action,
   dataIdFromObject,
 ): IdsMapState => {
@@ -48,6 +50,8 @@ export const idsMap = (
         ...mapIds(oldIds, newIds),
       };
     }
+    case RESET_STATE:
+      return InitialState;
     default:
       return state;
   }
