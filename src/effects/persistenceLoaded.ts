@@ -1,6 +1,6 @@
 import { MutationUpdaterFn } from "apollo-client";
 import { Store } from "redux";
-import { METADATA_KEY } from "cache/constants";
+import { METADATA_KEY } from "../cache/constants";
 import { EnqueuedMutationEffect } from "../links/offline";
 import { rootLogger, replaceUsingMap } from "../utils";
 import { OfflineCacheShape } from "../cache";

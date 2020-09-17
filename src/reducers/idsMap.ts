@@ -1,4 +1,4 @@
-import { RESET_STATE } from "actions/resetState";
+import { RESET_STATE } from "../actions/resetState";
 import { QUEUE_OPERATION } from "../actions/queueOperation";
 import { QUEUE_OPERATION_COMMIT } from "../actions/queueOperationCommit";
 import { SAVE_SERVER_ID } from "../actions/saveServerId";
