@@ -4,13 +4,14 @@ import ApolloClient, { MutationOptions, ApolloClientOptions, OperationVariables 
 import { ApolloLink, FetchResult } from "apollo-link";
 import { NormalizedCacheObject, ApolloReducerConfig } from "apollo-cache-inmemory";
 import { CacheUpdates } from "../links/offline";
-import { Discard } from "../store";
+import { Discard } from "../effects/discard";
 export declare type OfflineCallback = (error: any, success: any) => void;
 export interface OfflineConfig {
     discardCondition: Discard;
     callback?: OfflineCallback;
     storage?: any;
     storeCacheRootMutation?: boolean;
+    runPersistenceLoadedEffect?: boolean;
 }
 export interface ApolloOfflineClientOptions {
     disableOffline?: boolean;
@@ -21,15 +22,16 @@ export interface ApolloOfflineClientOptions {
     cacheOptions?: ApolloReducerConfig;
     mutationCacheUpdates?: CacheUpdates;
 }
-export default class ApolloOfflineClient<T extends NormalizedCacheObject> extends ApolloClient<T> {
+export default class ApolloOfflineClient extends ApolloClient<NormalizedCacheObject> {
     mutationCacheUpdates: CacheUpdates;
-    private _store;
+    private reduxStore;
     private hydratedPromise;
-    private _disableOffline;
-    hydrated(): Promise<ApolloOfflineClient<T>>;
-    constructor({ disableOffline, reduxMiddleware, offlineLink, onlineLink, cacheOptions, mutationCacheUpdates, offlineConfig: { discardCondition, callback: offlineCallback, storage, storeCacheRootMutation, }, }: ApolloOfflineClientOptions, { cache: customCache, link: customLink, ...clientOptions }?: Partial<ApolloClientOptions<T>>);
+    private disableOffline;
+    constructor({ disableOffline, reduxMiddleware, offlineLink, onlineLink, cacheOptions, mutationCacheUpdates, offlineConfig: { discardCondition, callback: offlineCallback, storage, storeCacheRootMutation, runPersistenceLoadedEffect, }, }: ApolloOfflineClientOptions, { cache: customCache, link: customLink, ...clientOptions }?: Partial<ApolloClientOptions<NormalizedCacheObject>>);
+    hydrated(): Promise<ApolloOfflineClient>;
     isOfflineEnabled(): boolean;
+    networkConnected(): boolean;
     reset(): Promise<void>;
-    mutate<T, TVariables = OperationVariables>(options: MutationOptions<T, TVariables>): Promise<FetchResult<T>>;
+    mutate<TData, TVariables = OperationVariables>(options: MutationOptions<TData, TVariables>): Promise<FetchResult<TData>>;
 }
 export { ApolloOfflineClient, CacheUpdates };

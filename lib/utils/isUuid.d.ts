@@ -1,2 +1,2 @@
-export declare const isUuid: (val: any) => RegExpMatchArray;
+export declare const isUuid: (val: any) => boolean;
 export default isUuid;

@@ -2,41 +2,35 @@
 import { ApolloLink, Operation, NextLink, Observable, GraphQLRequest, ExecutionResult, FetchResult } from "apollo-link";
 import { FetchPolicy, MutationUpdaterFn, MutationQueryReducersMap } from "apollo-client";
 import { RefetchQueryDescription } from "apollo-client/core/watchQueryOptions";
-import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
 import { NormalizedCacheObject } from "apollo-cache-inmemory";
 import { Store as ReduxStore } from "redux";
-import ApolloOfflineClient, { OfflineCallback } from "../client";
-import { OfflineCache, OfflineSyncMetadataState } from "../cache";
-import { Discard } from "../store";
+import { ApolloCache } from "apollo-cache";
+import saveSnapshot from "../actions/saveSnapshot";
+import { OfflineCacheShape } from "../cache";
 export declare type DetectNetwork = () => boolean;
-export declare const isOptimistic: (obj: any) => any;
 export interface CacheUpdates {
-    [key: string]: MutationUpdaterFn;
+    [key: string]: (context: any) => MutationUpdaterFn;
 }
-declare type Store = ReduxStore<OfflineCache>;
-export interface OfflineLinkOptions {
-    store: Store;
-}
-export default class OfflineLink extends ApolloLink {
-    private store;
-    constructor({ store }: OfflineLinkOptions);
-    request(operation: Operation, forward: NextLink): Observable<unknown>;
-}
+declare type Store = ReduxStore<OfflineCacheShape>;
+export declare const boundSaveSnapshot: <CacheShape extends NormalizedCacheObject>(store: Store, cache: ApolloCache<CacheShape>) => ReturnType<typeof saveSnapshot>;
 export declare type EnqueuedMutationEffect<T> = {
-    optimisticResponse: object;
+    optimisticResponse: Record<string, unknown>;
     operation: GraphQLRequest;
     update: MutationUpdaterFn<T>;
     updateQueries: MutationQueryReducersMap<T>;
     refetchQueries: ((result: ExecutionResult) => RefetchQueryDescription) | RefetchQueryDescription;
     observer: ZenObservable.SubscriptionObserver<T>;
     fetchPolicy?: FetchPolicy;
+    attemptId: string;
 };
-export declare const offlineEffect: <T extends NormalizedCacheObject>(store: ReduxStore<OfflineCache>, client: ApolloOfflineClient<T>, effect: EnqueuedMutationEffect<any>, action: OfflineAction, callback: OfflineCallback, mutationCacheUpdates: CacheUpdates) => Promise<FetchResult<Record<string, any>, Record<string, any>, Record<string, any>>>;
-export declare const discard: (discardCondition: Discard, callback: OfflineCallback) => (error: any, action: OfflineAction, retries: number) => any;
-export declare const offlineEffectConfig: {
-    enqueueAction: string;
-    effect: <T extends NormalizedCacheObject>(store: ReduxStore<OfflineCache>, client: ApolloOfflineClient<T>, effect: EnqueuedMutationEffect<any>, action: OfflineAction, callback: OfflineCallback, mutationCacheUpdates: CacheUpdates) => Promise<FetchResult<Record<string, any>, Record<string, any>, Record<string, any>>>;
-    discard: (discardCondition: Discard, callback: OfflineCallback) => (error: any, action: OfflineAction, retries: number) => any;
-    reducer: (dataIdFromObject: any) => (state: OfflineSyncMetadataState, action: any) => any;
-};
+export interface OfflineLinkOptions {
+    store: Store;
+}
+export default class OfflineLink extends ApolloLink {
+    private store;
+    constructor({ store }: OfflineLinkOptions);
+    request(operation: Operation, forward: NextLink): Observable<FetchResult>;
+    processOfflineQuery: (operation: Operation) => unknown;
+    enqueueMutation: <T>(operation: Operation, observer: ZenObservable.SubscriptionObserver<T>) => Record<string, unknown>;
+}
 export {};

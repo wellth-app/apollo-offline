@@ -1,6 +1,12 @@
+import { IdGetter } from "apollo-cache-inmemory";
 import { isUuid } from "./isUuid";
 
-export const getIds = (dataIdFromObject, obj, path = "", acc = {}) => {
+export const getIds = (
+  dataIdFromObject: IdGetter,
+  obj: any,
+  path = "",
+  acc = {},
+): { [key: string]: string } => {
   if (!obj) {
     return acc;
   }

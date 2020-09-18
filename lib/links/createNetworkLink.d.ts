@@ -1,5 +1,5 @@
 import { ApolloLink } from "apollo-link";
-import { OfflineLinkOptions } from "../links/offline";
+import { OfflineLinkOptions } from "./offline";
 export interface CreateNetworkLinkOptions extends OfflineLinkOptions {
     disableOffline: boolean;
     offlineLink?: ApolloLink;

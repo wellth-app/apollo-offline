@@ -3,10 +3,10 @@ import { Observable, ApolloLink } from "apollo-link";
 import { createHttpLink } from "apollo-link-http";
 import { setContext } from "apollo-link-context";
 import gql from "graphql-tag";
-import { ApolloOfflineClient, ApolloOfflineClientOptions } from "./";
-import { isOptimistic } from "../links/offline";
 import { GraphQLError } from "graphql";
 import { ApolloError } from "apollo-client";
+import { isOptimistic } from "../utils/isOptimistic";
+import { ApolloOfflineClient, ApolloOfflineClientOptions } from ".";
 
 jest.mock("apollo-link-http", () => ({
   createHttpLink: jest.fn(),
@@ -99,7 +99,7 @@ const getClient = (options?: Partial<ApolloOfflineClientOptions>) => {
     offlineConfig: {
       storage: new MemoryStorage(),
       discardCondition: () => false,
-      callback: null, //console.warn.bind(console),
+      callback: null, // console.warn.bind(console),
     },
   };
 
@@ -115,9 +115,11 @@ const getClient = (options?: Partial<ApolloOfflineClientOptions>) => {
 
 class MemoryStorage {
   private storage;
+
   private logger;
+
   constructor({ logger = null, initialState = {} } = {}) {
-    this.storage = Object.assign({}, initialState);
+    this.storage = { ...initialState };
     this.logger = logger;
   }
 
@@ -126,6 +128,7 @@ class MemoryStorage {
       this.logger(...args);
     }
   }
+
   setItem(key, value, callback) {
     return new Promise((resolve, reject) => {
       this.storage[key] = value;
@@ -165,8 +168,8 @@ class MemoryStorage {
 }
 
 describe("ApolloOfflineClient", () => {
-  const localId = uuid();
-  const serverId = uuid();
+  const localId: string = uuid();
+  const serverId: string = uuid();
 
   const optimisticResponse = {
     addTodo: {
@@ -198,7 +201,7 @@ describe("ApolloOfflineClient", () => {
 
   describe("Offline disabled", () => {
     const disableOffline = true;
-    let client: ApolloOfflineClient<any>;
+    let client: ApolloOfflineClient;
     beforeEach(() => {
       mockHttpResponse({ data: serverResponse });
       client = getClient({ disableOffline });
@@ -224,7 +227,7 @@ describe("ApolloOfflineClient", () => {
 
   describe("Offline enabled", () => {
     const disableOffline = false;
-    let client: ApolloOfflineClient<any>;
+    let client: ApolloOfflineClient;
     beforeEach(() => {
       mockHttpResponse({ data: serverResponse });
       client = getClient({ disableOffline });
@@ -329,8 +332,8 @@ describe("ApolloOfflineClient", () => {
         setNetworkOnlineStatus(true);
       });
 
-      it("updates the cache with the optimistic response", () => {
-        client.mutate({
+      it("updates the cache with the optimistic response", async (done) => {
+        await client.mutate({
           mutation,
           variables,
           optimisticResponse,
@@ -340,6 +343,8 @@ describe("ApolloOfflineClient", () => {
         expect(client.cache.extract(true)).toMatchObject({
           [`Todo:${localId}`]: optimisticResponse.addTodo,
         });
+
+        done();
       });
 
       describe("error handling", () => {
@@ -353,7 +358,7 @@ describe("ApolloOfflineClient", () => {
           });
 
           const offlineCallback = jest.fn();
-          const client = getClient({
+          client = getClient({
             disableOffline,
             offlineConfig: {
               callback: offlineCallback,
@@ -471,10 +476,10 @@ describe("ApolloOfflineClient", () => {
     });
 
     describe("Offline", () => {
-      it("updates the cache with the optimistic response", () => {
+      it("updates the cache with the optimistic response", async (done) => {
         setNetworkOnlineStatus(false);
 
-        client.mutate({
+        await client.mutate({
           mutation,
           variables,
           optimisticResponse,
@@ -484,6 +489,8 @@ describe("ApolloOfflineClient", () => {
         expect(client.cache.extract(true)).toMatchObject({
           [`Todo:${localId}`]: optimisticResponse.addTodo,
         });
+
+        done();
       });
     });
   });
