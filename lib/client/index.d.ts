@@ -1,6 +1,6 @@
 import "setimmediate";
 import { Middleware } from "redux";
-import ApolloClient, { MutationOptions, ApolloClientOptions, OperationVariables } from "apollo-client";
+import ApolloClient, { MutationOptions, ApolloClientOptions, OperationVariables, ApolloQueryResult } from "apollo-client";
 import { ApolloLink, FetchResult } from "apollo-link";
 import { NormalizedCacheObject, ApolloReducerConfig } from "apollo-cache-inmemory";
 import { CacheUpdates } from "../links/offline";
@@ -31,7 +31,10 @@ export default class ApolloOfflineClient extends ApolloClient<NormalizedCacheObj
     hydrated(): Promise<ApolloOfflineClient>;
     isOfflineEnabled(): boolean;
     networkConnected(): boolean;
-    reset(): Promise<void>;
+    reset(): Promise<ApolloQueryResult<any>[]>;
+    resetStore(): Promise<ApolloQueryResult<any>[]>;
+    clearStore(): Promise<any[]>;
+    private resetReduxStore;
     mutate<TData, TVariables = OperationVariables>(options: MutationOptions<TData, TVariables>): Promise<FetchResult<TData>>;
 }
 export { ApolloOfflineClient, CacheUpdates };
