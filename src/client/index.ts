@@ -5,6 +5,7 @@ import ApolloClient, {
   ApolloClientOptions,
   OperationVariables,
   MutationUpdaterFn,
+  ApolloQueryResult,
 } from "apollo-client";
 import {
   ApolloLink,
@@ -191,11 +192,28 @@ export default class ApolloOfflineClient extends ApolloClient<
     return this.reduxStore.getState().offline.online;
   }
 
-  async reset(): Promise<void> {
-    logger("Resetting client store and cache");
+  reset(): Promise<ApolloQueryResult<any>[]> {
+    // eslint-disable-next-line no-console
+    console.info(
+      "ApolloOfflineClient.reset() is deprecated and will be removed in future versions. Use `resetStore` or `clearStore` instead.",
+    );
+
+    return this.resetStore();
+  }
+
+  resetStore(): Promise<ApolloQueryResult<any>[]> {
+    this.resetReduxStore();
+    return super.resetStore();
+  }
+
+  clearStore(): Promise<any[]> {
+    this.resetReduxStore();
+    return super.clearStore();
+  }
+
+  private resetReduxStore(): void {
+    logger("Resetting redux store");
     this.reduxStore.dispatch(resetState);
-    await this.cache.reset();
-    await this.resetStore();
   }
 
   mutate<TData, TVariables = OperationVariables>(
