@@ -188,8 +188,12 @@ export default class ApolloOfflineClient extends ApolloClient<
     return !this.disableOffline;
   }
 
+  reduxState(): OfflineCacheType {
+    return this.reduxStore.getState();
+  }
+
   networkConnected(): boolean {
-    return this.reduxStore.getState().offline.online;
+    return this.reduxState().offline.online;
   }
 
   reset(): Promise<ApolloQueryResult<any>[]> {
