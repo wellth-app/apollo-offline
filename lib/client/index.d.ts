@@ -4,8 +4,10 @@ import ApolloClient, { MutationOptions, ApolloClientOptions, OperationVariables,
 import { ApolloLink, FetchResult } from "apollo-link";
 import { NormalizedCacheObject, ApolloReducerConfig } from "apollo-cache-inmemory";
 import { CacheUpdates } from "../links/offline";
-import { Discard } from "../effects/discard";
+import { Discard, OfflineAction } from "../effects/discard";
+import { OfflineCacheShape as OfflineCacheType } from "../cache";
 export declare type OfflineCallback = (error: any, success: any) => void;
+export { Discard, OfflineAction };
 export interface OfflineConfig {
     discardCondition: Discard;
     callback?: OfflineCallback;
@@ -30,6 +32,7 @@ export default class ApolloOfflineClient extends ApolloClient<NormalizedCacheObj
     constructor({ disableOffline, reduxMiddleware, offlineLink, onlineLink, cacheOptions, mutationCacheUpdates, offlineConfig: { discardCondition, callback: offlineCallback, storage, storeCacheRootMutation, runPersistenceLoadedEffect, }, }: ApolloOfflineClientOptions, { cache: customCache, link: customLink, ...clientOptions }?: Partial<ApolloClientOptions<NormalizedCacheObject>>);
     hydrated(): Promise<ApolloOfflineClient>;
     isOfflineEnabled(): boolean;
+    reduxState(): OfflineCacheType;
     networkConnected(): boolean;
     reset(): Promise<ApolloQueryResult<any>[]>;
     resetStore(): Promise<ApolloQueryResult<any>[]>;

@@ -1,11 +1,18 @@
-import { Config, OfflineAction } from "@redux-offline/redux-offline/lib/types";
+import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
 import { tryFunctionOrLogError } from "apollo-utilities";
 import { EnqueuedMutationEffect } from "../links/offline";
 import { rootLogger } from "../utils";
 
 const logger = rootLogger.extend("discard-effect");
 
-export type Discard = Config["discard"];
+export { OfflineAction };
+
+// !!!: Exporting `Config["discard"]` results in `any` on the end of the
+export type Discard = (
+  error: any,
+  action: OfflineAction,
+  retries: number,
+) => boolean;
 
 const ERROR_STATUS_CODE = 400;
 
