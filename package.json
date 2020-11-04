@@ -23,7 +23,7 @@
     "test": "jest --coverage --coverageReporters=text"
   },
   "dependencies": {
-    "@redux-offline/redux-offline": "https://github.com/justinmakaila/redux-offline.git#56aabe6",
+    "@redux-offline/redux-offline": "2.5.2.native-4",
     "debug": "^4.1.1",
     "redux-thunk": "^2.3.0",
     "setimmediate": "^1.0.5"

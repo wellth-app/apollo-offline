@@ -13,7 +13,7 @@ export type Discard = (
   error: any,
   action: OfflineAction,
   retries: number,
-) => Promise<boolean>;
+) => boolean | Promise<boolean>;
 
 const ERROR_STATUS_CODE = 400;
 
