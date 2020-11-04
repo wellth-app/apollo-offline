@@ -88,7 +88,9 @@ export default class ApolloOfflineClient extends ApolloClient<
       mutationCacheUpdates = {},
       offlineConfig: {
         discardCondition,
-        callback: offlineCallback = undefined,
+        callback: offlineCallback = () => {
+          // !!!: Do nothing by default
+        },
         storage = undefined,
         storeCacheRootMutation = false,
         runPersistenceLoadedEffect = false,

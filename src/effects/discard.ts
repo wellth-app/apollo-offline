@@ -1,5 +1,6 @@
 import { OfflineAction } from "@redux-offline/redux-offline/lib/types";
 import { tryFunctionOrLogError } from "apollo-utilities";
+import { GraphQLError } from "graphql";
 import { EnqueuedMutationEffect } from "../links/offline";
 import { rootLogger } from "../utils";
 
@@ -7,21 +8,25 @@ const logger = rootLogger.extend("discard-effect");
 
 export { OfflineAction };
 
-// !!!: Exporting `Config["discard"]` results in `any` on the end of the
+// !!!: Exporting `Config["discard"]` results in `any` on the consumer
 export type Discard = (
   error: any,
   action: OfflineAction,
   retries: number,
-) => boolean;
+) => Promise<boolean>;
 
 const ERROR_STATUS_CODE = 400;
 
-const shouldDiscard = (
-  error: any,
+const shouldDiscard = async (
+  error: {
+    graphQLErrors: GraphQLError[];
+    networkError: any;
+    permanent: boolean;
+  },
   action: OfflineAction,
   retries: number,
   discardCondition: Discard,
-): boolean => {
+): Promise<boolean> => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const { graphQLErrors = [], networkError, permanent } = error;
 
@@ -40,15 +45,20 @@ const shouldDiscard = (
   }
 
   // If the error is permanent or the consumer says so, discard the request
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  return permanent || discardCondition(error, action, retries);
+  const clientDiscard = await discardCondition(error, action, retries);
+  return permanent || clientDiscard;
 };
 
 export const discard = (
   discardCondition: Discard,
   callback: (error: any) => void,
-): Discard => (error: any, action: OfflineAction, retries: number) => {
-  const discardResult = shouldDiscard(error, action, retries, discardCondition);
+): Discard => async (error: any, action: OfflineAction, retries: number) => {
+  const discardResult = await shouldDiscard(
+    error,
+    action,
+    retries,
+    discardCondition,
+  );
 
   if (discardResult) {
     // Call observer
