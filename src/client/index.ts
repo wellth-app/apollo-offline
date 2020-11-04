@@ -25,7 +25,7 @@ import {
 import { persistenceLoadedEffect } from "../effects/persistenceLoaded";
 import { CacheUpdates } from "../links/offline";
 import { offlineEffect } from "../effects/offline";
-import { discard, Discard } from "../effects/discard";
+import { discard, Discard, OfflineAction } from "../effects/discard";
 import passthroughLink from "../links/passthrough";
 import { createNetworkLink } from "../links/createNetworkLink";
 import resetState from "../actions/resetState";
@@ -36,6 +36,7 @@ import OfflineCache, { OfflineCacheShape as OfflineCacheType } from "../cache";
 const logger = rootLogger.extend("client");
 
 export type OfflineCallback = (error: any, success: any) => void;
+export { Discard, OfflineAction };
 
 export interface OfflineConfig {
   // Condition to evaulate whether an error request should be discarded (default undefined).
@@ -87,7 +88,9 @@ export default class ApolloOfflineClient extends ApolloClient<
       mutationCacheUpdates = {},
       offlineConfig: {
         discardCondition,
-        callback: offlineCallback = undefined,
+        callback: offlineCallback = () => {
+          // !!!: Do nothing by default
+        },
         storage = undefined,
         storeCacheRootMutation = false,
         runPersistenceLoadedEffect = false,
@@ -188,8 +191,12 @@ export default class ApolloOfflineClient extends ApolloClient<
     return !this.disableOffline;
   }
 
+  reduxState(): OfflineCacheType {
+    return this.reduxStore.getState();
+  }
+
   networkConnected(): boolean {
-    return this.reduxStore.getState().offline.online;
+    return this.reduxState().offline.online;
   }
 
   reset(): Promise<ApolloQueryResult<any>[]> {

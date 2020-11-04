@@ -1,6 +1,6 @@
+import { v4 as uuid } from "uuid";
 import { getIds } from "./getIds";
 import { defaultDataIdFromObject } from "../cache";
-import { v4 as uuid } from "uuid";
 
 describe("getIds", () => {
   it("returns an id from a simple object", () => {
